@@ -216,3 +216,43 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# ==================================================
+# Master thesis project data
+# ==================================================
+
+# Generated project data
+data_saved/
+
+# Biological sequences
+*.fasta
+*.fa
+*.faa
+*.aln
+*.yaml
+
+# Spreadsheet data
+*.csv
+*.xlsx
+*.xls
+
+# Structure files
+*.pdb
+*.cif
+
+# Molecular dynamics trajectories
+*.dcd
+*.xtc
+*.trr
+*.gro
+*.tpr
+
+# Generated figures and reports
+*.png
+*.jpg
+*.jpeg
+*.pdf
+
+# PyCharm project files
+.idea/
