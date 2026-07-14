@@ -1,0 +1,207 @@
+============================================================
+DATA STRUCTURES OVERVIEW – Masterthesis Picobodies
+============================================================
+
+This document describes the three core data structures used
+for sequence handling and deduplication in this project.
+
+------------------------------------------------------------
+picobody_sequences
+------------------------------------------------------------
+Description:
+Raw FASTA import structure containing all sequences, including
+technical duplicates (R1/R2) and sample-level redundancy.
+
+Structure:
+Cow → Sample → Read → list of sequences
+
+picobody_sequences = {
+    "Cow_7886": {
+        "Sample1": {
+            "Read1": [
+                {
+                    "id": "seq_001",
+                    "sequence": "ACDEFG..."
+                },
+                {
+                    "id": "seq_002",
+                    "sequence": "MNPRST..."
+                }
+            ],
+            "Read2": [
+                {
+                    "id": "seq_001",
+                    "sequence": "ACDEFG..."
+                }
+            ]
+        },
+        "Sample2": {
+            "Read1": [
+                {
+                    "id": "seq_145",
+                    "sequence": "QWERTY..."
+                }
+            ]
+        }
+    },
+    "Cow_7901": {
+        ...
+    }
+}
+
+------------------------------------------------------------
+negative_binder_sequences
+------------------------------------------------------------
+Description:
+Non-binding (negative) picobody sequences derived from
+antigen-positive bovine B cells. Although the antigen (mClover)
+was present during selection, these sequences showed no
+experimental binding.
+
+Structure:
+sequence → metadata (name, first_found_in)
+
+negative_binder_sequences = {
+    "ACDEFG...": {
+        "name": "anti-mClover-ulCDR-v1-Fd",
+        "first_found_in": "Overview_Sequences_Picobody_anti-mClover.xlsx"
+    },
+    "QWERTY...": {
+        "name": "anti-mClover-ulCDR-v2-Fd",
+        "first_found_in": "Overview_Sequences_Picobody_anti-mClover.xlsx"
+    }
+}
+
+------------------------------------------------------------
+unique_picobody_sequences_per_cow
+------------------------------------------------------------
+Description:
+Deduplicated sequences per cow based on exact amino acid
+sequence identity. Each sequence appears only once per cow,
+while all technical origins are retained.
+
+Structure:
+Cow → sequence → metadata (id, sources)
+
+unique_picobody_sequences_per_cow = {
+    "Cow_7886": {
+        "ACDEFG...": {
+            "id": "seq_001",
+            "sources": [
+                ("Sample1", "Read1"),
+                ("Sample1", "Read2")
+            ]
+        },
+        "QWERTY...": {
+            "id": "seq_145",
+            "sources": [
+                ("Sample2", "Read1")
+            ]
+        }
+    },
+    "Cow_7901": {
+        ...
+    }
+}
+
+------------------------------------------------------------
+unique_picobody_sequences_global
+------------------------------------------------------------
+Description:
+Globally deduplicated sequence set across all cows. Each amino
+acid sequence appears exactly once in the entire dataset.
+All technical origins (cow, sample, read) are retained, and
+the total number of occurrences is tracked.
+
+Structure:
+sequence → metadata (id, sources, occurrence)
+
+unique_picobody_sequences_global = {
+    "ACDEFG...": {
+        "id": "seq_001",
+        "sources": [
+            ("Cow_7886", "Sample1", "Read1"),
+            ("Cow_7901", "Sample2", "Read2")
+        ],
+        "occurrence": 2
+    },
+    "QWERTY...": {
+        "id": "seq_145",
+        "sources": [
+            ("Cow_7886", "Sample2", "Read1")
+        ],
+        "occurrence": 1
+    }
+}
+
+------------------------------------------------------------
+raw_sequences (flattened raw FASTA data)
+------------------------------------------------------------
+Description:
+Flattened representation of all imported FASTA sequences.
+Each entry corresponds to one raw sequencing record before
+any deduplication or filtering steps.
+
+Structure:
+list of records (one entry per imported sequence)
+
+raw_sequences = [
+    {
+        "cow": "Cow_7886",
+        "sample": "Sample1",
+        "read": "Read2",
+        "id": "seq_001",
+        "sequence": "ACDEFG..."
+    },
+    {
+        "cow": "Cow_7901",
+        "sample": "Sample2",
+        "read": "Read1",
+        "id": "seq_145",
+        "sequence": "QWERTY..."
+    }
+]
+
+------------------------------------------------------------
+candidate_sequences
+------------------------------------------------------------
+Description:
+Subset of globally unique sequences obtained by excluding
+experimentally confirmed negative binders. All remaining
+sequences have unknown binding status and represent
+putative binder candidates.
+
+Structure:
+sequence → metadata (id, sources, occurrence)
+
+candidate_sequences = {
+    "ACDEFG...": {
+        "id": "seq_001",
+        "sources": [
+            ("Cow_7886", "Sample1", "Read1"),
+            ("Cow_7901", "Sample2", "Read2")
+        ],
+        "occurrence": 2
+    },
+    "ZXCVBN...": {
+        "id": "seq_210",
+        "sources": [
+            ("Cow_7901", "Sample1", "Read1")
+        ],
+        "occurrence": 1
+    }
+}
+
+
+------------------------------------------------------------
+Notes
+------------------------------------------------------------
+
+- Deduplication is performed strictly based on exact amino
+  acid sequence identity.
+- Any difference in length or residue composition results
+  in a distinct sequence.
+- Provenance tracking ensures full traceability from raw
+  sequencing data to final non-redundant candidates.
+
+============================================================
