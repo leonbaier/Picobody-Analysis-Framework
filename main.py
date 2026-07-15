@@ -62,6 +62,8 @@ from structure_prediction_analysis import (
     collect_boltz_best_models,
     collect_af_best_models,
     build_af_model_to_cluster,
+    filter_plddt_stats_by_ids,
+    plot_plddt_landscape_groups,
     build_global_display_order,
     plot_mean_plddt_multi_models,
     collect_esm_chain_models,
@@ -418,6 +420,9 @@ if structure_prediction_analysis_bool:
 
     for model_name, cfg in MODEL_CONFIGS.items():
 
+        subset_without = None
+        subset_chain = None
+
         for run_dir, ligand_state in cfg["runs"]:
             print(f"------{cfg['label']} ({ligand_state})------")
 
@@ -427,6 +432,12 @@ if structure_prediction_analysis_bool:
             plddt_stats = cfg["collector"](full_path)
             global_max_len = get_max_residue_length(plddt_stats)
             model_to_cluster = cfg["cluster_builder"](plddt_stats)
+
+            if ligand_state == "without ligand":
+                subset_without = filter_plddt_stats_by_ids(
+                    plddt_stats,
+                    pure_tested_ids +
+                    pure_comparison_ids)
 
             suffix = cfg["suffix_clean"](run_dir)
 
@@ -444,6 +455,10 @@ if structure_prediction_analysis_bool:
                 print(f"------{cfg['label']} ({ligand_state}) CHAIN A------")
 
                 chain_stats = cfg["collector_chain"](full_path)
+                subset_chain = filter_plddt_stats_by_ids(
+                    chain_stats,
+                    pure_tested_ids +
+                    pure_comparison_ids)
 
                 global_max_len_chain = get_max_residue_length(chain_stats)
                 full_mapping = cfg["cluster_builder"](plddt_stats)
@@ -460,8 +475,16 @@ if structure_prediction_analysis_bool:
                     display_index=display_index,
                     save_path=(save_dir_plots / f"plddt_landscape_{suffix}_chainA.png"),
                     max_residue_len=None,
-                    model_name=f"{cfg['label']} ({ligand_state}, chain A)"
-                )
+                    model_name=f"{cfg['label']} ({ligand_state}, chain A)")
+
+                if subset_without is not None and subset_chain is not None:
+                    plot_plddt_landscape_groups(
+                        stats_without=subset_without,
+                        stats_chainA=subset_chain,
+                        tested_ids=pure_tested_ids,
+                        comparison_ids=pure_comparison_ids,
+                        save_path=(save_dir_plots / f"{model_name}_tested_vs_comparison.png"),
+                        model_name=cfg["label"],)
 
     CONDITIONS = [
         ("without ligand", {

@@ -652,6 +652,129 @@ def extract_seq_id(mid: str) -> str:
     raise ValueError(f"Cannot parse seq_id from {mid}")
 
 
+def filter_plddt_stats_by_ids(plddt_stats: dict, wanted_ids: list[str],
+) -> dict:
+
+    wanted_ids = set(wanted_ids)
+
+    return {
+        mid: stats
+        for mid, stats in plddt_stats.items()
+        if extract_seq_id(mid) in wanted_ids
+    }
+
+
+def load_plddt_array(plddt_path):
+    data = np.load(plddt_path)
+
+    if isinstance(data, np.ndarray):
+        plddt = data
+    else:
+        plddt = data[data.files[0]]
+
+    if plddt.ndim == 3:
+        plddt = plddt.squeeze()
+        plddt = plddt.mean(axis=-1)
+
+    elif plddt.ndim == 2:
+        plddt = plddt.mean(axis=-1)
+
+    return np.squeeze(plddt)
+
+
+def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, comparison_ids, save_path=None, model_name=None,
+):
+    ordered_rows = []
+
+    for seq_id in tested_ids:
+        ordered_rows.append((f"{seq_id} WO",
+                             next(v for k, v in stats_without.items()
+                                  if extract_seq_id(k) == seq_id)))
+
+        ordered_rows.append((f"{seq_id} A",
+                             next(v for k, v in stats_chainA.items()
+                                  if extract_seq_id(k) == seq_id)))
+
+    for seq_id in comparison_ids:
+        ordered_rows.append((f"{seq_id} WO",
+                             next(v for k, v in stats_without.items()
+                                  if extract_seq_id(k) == seq_id)))
+
+        ordered_rows.append((f"{seq_id} A",
+                             next(v for k, v in stats_chainA.items()
+                                  if extract_seq_id(k) == seq_id)))
+
+    labels = []
+    plddt_arrays = []
+    mean_plddt = []
+
+    for label, stats in ordered_rows:
+        arr = load_plddt_array(stats["plddt_path"])
+
+        labels.append(label)
+        plddt_arrays.append(arr)
+        mean_plddt.append(arr.mean())
+
+    max_len = max(len(x) for x in plddt_arrays)
+    heatmap = np.full((len(plddt_arrays), max_len), np.nan)
+
+    for i, arr in enumerate(plddt_arrays):
+        heatmap[i, :len(arr)] = arr
+
+    fig = plt.figure(figsize=(12, 8))
+    gs = gridspec.GridSpec(
+        1,
+        2,
+        width_ratios=[4, 0.8],
+        wspace=0.05,)
+
+    ax_heatmap = fig.add_subplot(gs[0])
+    ax_mean = fig.add_subplot(gs[1], sharey=ax_heatmap)
+
+    im = ax_heatmap.imshow(
+        heatmap,
+        aspect="auto",
+        cmap="viridis",
+        vmin=0,
+        vmax=100,
+        interpolation="nearest",)
+
+    ax_heatmap.set_yticks(np.arange(len(labels)))
+    ax_heatmap.set_yticklabels(labels, fontsize=8,)
+    ax_heatmap.set_xlabel("Residue position")
+    ax_heatmap.set_title("Residue-wise pLDDT")
+
+    ax_mean.barh(
+        np.arange(len(mean_plddt)),
+        mean_plddt,
+        color="black",
+        alpha=0.6,)
+
+    ax_mean.axvline(70, color="red", linestyle="--")
+
+    ax_mean.set_xlim(0, 100)
+    ax_mean.set_xlabel("Mean pLDDT")
+
+    plt.setp(ax_mean.get_yticklabels(), visible=False)
+
+    cbar = fig.colorbar(
+        im,
+        ax=ax_heatmap,
+        fraction=0.046,
+        pad=0.01,)
+
+    cbar.set_label("pLDDT")
+    fig.suptitle(f"{model_name}: tested vs comparison", fontsize=14,)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight",)
+    else:
+        plt.show()
+
+    plt.close()
+
 
 def plot_mean_plddt_multi_models(plddt_stats_dict: dict, labels: list[str], save_path=None, display_index=None,
                                  max_structure_index=None, title=None,
