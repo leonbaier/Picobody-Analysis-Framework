@@ -10,7 +10,70 @@ from matplotlib.colors import Normalize
 from Bio import SeqIO
 from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB import PDBParser
+import pandas as pd
 
+
+def get_negative_binder_ids_from_vx_name(excel_path: Path, binders: str | list[str],
+) -> dict[str, str]:
+    """
+    Return internal seq IDs for negative binders.
+
+    Example:
+    >>> get_negative_binder_ids_from_vx_name(Path("clustering_summary.xlsx"), ["v1", "v5"])
+
+    {
+        "v1": "seq_25",
+        "v5": "seq_28"
+    }
+    """
+
+    if isinstance(binders, str):
+        binders = [binders]
+
+    df = pd.read_excel(excel_path, sheet_name="Sequences")
+    negatives = df[df["Type"] == "negative"]
+    result = {}
+
+    for binder in binders:
+        target_name = f"anti-mClover-ulCDR-{binder}-Fd"
+        hit = negatives[negatives["Original_Name"] == target_name]
+
+        if not hit.empty:
+            result[binder] = hit.iloc[0]["ID"]
+
+    return result
+
+
+def build_comparison_and_tested_id_sets(comparison_ids: list[str], tested_ids: list[str],
+        additional_comparison_ids: list[str] | None = None, additional_tested_ids: list[str] | None = None,
+) -> tuple[list[str], list[str]]:
+    """
+    Build two sorted ID sets.
+
+    Example
+    -------
+    comparison_ids:
+        ["seq_28", "seq_39"]
+
+    additional_comparison_ids:
+        ["seq_5"]
+
+    ->
+        ["seq_5", "seq_28", "seq_39"]
+    """
+
+    additional_comparison_ids = additional_comparison_ids or []
+    additional_tested_ids = additional_tested_ids or []
+
+    comparison_result = sorted(
+        set(comparison_ids + additional_comparison_ids),
+        key=lambda x: int(re.search(r"\d+", x).group()))
+
+    tested_result = sorted(
+        set(tested_ids + additional_tested_ids),
+        key=lambda x: int(re.search(r"\d+", x).group()))
+
+    return comparison_result, tested_result
 
 
 def build_global_display_order(clusters: dict) -> dict:

@@ -52,6 +52,8 @@ from structure_prediction_prep import (
     map_disulfides_to_knobs,
     generate_valid_disulfide_constraints)
 from structure_prediction_analysis import (
+    get_negative_binder_ids_from_vx_name,
+    build_comparison_and_tested_id_sets,
     collect_plddt_stats,
     get_max_residue_length,
     build_model_to_cluster_from_fasta,
@@ -85,9 +87,9 @@ DEBUG = False
 general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
-structure_prediction_analysis_bool = False # does not work if old pdb files are present
+structure_prediction_analysis_bool = True # does not work if old pdb files are present
 MD_prep_bool = False
-MD_analysis_bool = True
+MD_analysis_bool = False
 
 selected_seqs_MD = [
     {
@@ -353,6 +355,18 @@ if structure_prediction_prep_bool:
 
 if structure_prediction_analysis_bool:
     print("\n--------------------Structure Prediction Analysis--------------------")
+    neg_ids_for_comparison = get_negative_binder_ids_from_vx_name(
+        save_dir_variable_data / "clustering_summary.xlsx",
+        ["v5", "v8", "v9", "v11"])
+    tested_id_v1 = get_negative_binder_ids_from_vx_name(
+        save_dir_variable_data / "clustering_summary.xlsx",
+        "v1")
+
+    pure_comparison_ids, pure_tested_ids = build_comparison_and_tested_id_sets(
+        comparison_ids=list(neg_ids_for_comparison.values()),
+        tested_ids=list(tested_id_v1.values()),
+        additional_comparison_ids=[],
+        additional_tested_ids=["seq_1", "seq_12", "seq_78",])
 
     MODEL_CONFIGS = {
         "esm": {
