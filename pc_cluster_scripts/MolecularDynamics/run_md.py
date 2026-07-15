@@ -7,11 +7,7 @@ import subprocess
 gpu_name = "Unknown"
 try:
     gpu_name = subprocess.check_output(
-        [
-            "nvidia-smi",
-            "--query-gpu=name",
-            "--format=csv,noheader",
-        ],
+        ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader",],
         text=True,
     ).splitlines()[0]
 except Exception:
@@ -33,11 +29,24 @@ system = forcefield.createSystem(
     nonbondedCutoff=1.0*nanometer,
     constraints=HBonds)
 
+# Backbone restraints (pull stronger back if farther away)
+restraint = CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2)")
+restraint.addGlobalParameter("k", 1000.0) # initial k
+
+restraint.addPerParticleParameter("x0")
+restraint.addPerParticleParameter("y0")
+restraint.addPerParticleParameter("z0")
+
+for atom in modeller.topology.atoms():
+    if atom.name in ["N", "CA", "C"]:
+        pos = modeller.positions[atom.index]
+        restraint.addParticle(atom.index,
+            [pos.x.value_in_unit(nanometer), pos.y.value_in_unit(nanometer), pos.z.value_in_unit(nanometer)])
+system.addForce(restraint)
+
 # defines dynamics (T, friction, timestep) and device
-integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
 platform = Platform.getPlatformByName('CUDA')
-
-
 
 # creates simulation from structure, force field, dynamics, and device; sets start coordinates
 simulation = Simulation(modeller.topology, system, integrator, platform)
@@ -50,6 +59,14 @@ start_walltime = time.time()
 print("Minimizing...")
 simulation.minimizeEnergy()
 
+# store initial structure
+state = simulation.context.getState(getPositions=True)
+with open("initial.pdb", "w") as f:
+    PDBFile.writeFile(
+        simulation.topology,
+        state.getPositions(),
+        f)
+
 # writes output to log.txt every steps, includes t, T, potential and total energy; writes trajectory
 simulation.reporters.append(StateDataReporter(
     "log.txt",
@@ -60,10 +77,24 @@ simulation.reporters.append(StateDataReporter(
     potentialEnergy=True,
     totalEnergy=True))
 simulation.reporters.append(DCDReporter("trajectory.dcd",50000))
+simulation.reporters.append(CheckpointReporter( "checkpoint.chk", 10000000))
 
 # starts simulation (timesteps [2 fs] times steps is simulated time)
 print("Starts simulation...")
-simulation.step(25000000)
+print("Equilibration phase 1 (strong restraints)")
+simulation.step(500000)  # 1 ns
+
+print("Equilibration phase 2 (medium restraints)")
+simulation.context.setParameter("k", 100.0)
+simulation.step(500000)  # 1 ns
+
+print("Equilibration phase 3 (weak restraints)")
+simulation.context.setParameter("k", 10.0)
+simulation.step(500000)  # 1 ns
+
+print("Production run")
+simulation.context.setParameter("k", 0.0)
+simulation.step(98500000)
 
 positions = simulation.context.getState(getPositions=True).getPositions()
 

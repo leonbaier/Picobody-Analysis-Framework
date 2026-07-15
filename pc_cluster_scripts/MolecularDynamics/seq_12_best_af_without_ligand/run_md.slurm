@@ -2,7 +2,7 @@
 #SBATCH --job-name=picobodies_openmm_LeonB
 #SBATCH --output=test.out
 #SBATCH --error=test.err
-#SBATCH --time=48:00:00
+#SBATCH --time=96:00:00
 
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
