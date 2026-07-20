@@ -80,6 +80,9 @@ from MD_analysis import (
     create_rmsd_analysis,
     create_rmsf_analysis,
     create_binder_target_distance_analysis,)
+from wet_lab_analysis import (
+    load_akta_csv,
+    plot_affinity_chromatography_run)
 
 
 # ---------------Switches-----------------------
@@ -90,8 +93,9 @@ general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
-MD_prep_bool = True
+MD_prep_bool = False
 MD_analysis_bool = False
+wet_lab_analysis_bool = True
 
 selected_seqs_MD = [
     {
@@ -142,7 +146,6 @@ FASTA_PATH_SOURCE = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_
 EXCEL_PATH_SOURCE = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_Picobodies\Source_Structure Thesis\Picobody_Sequences_Anti-mClover\Overview_Sequences_Picobody_anti-mClover.xlsx")
 aln_path_knobs_internship = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_Picobodies\Source_Structure Thesis\knobs_internship.aln")
 pdb_folder_knobs_internship = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_Picobodies\Source_Structure Thesis\knobs_internship_structures")
-txt_seq_mclover3 = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_Picobodies\Source_Structure Thesis\Seq_mClover3.txt")
 seq_mclover3 = "MVSKGEELFTGVVPILVELDGDVNGHKFSVRGEGEGDATNGKLTLKFICTTGKLPVPWPTLVTTFGYGVACFSRYPDHMKQHDFFKSAMPEGYVQERTISFKDDGTYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNFNSHYVYITADKQKNCIKANFKIRHNVEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSHQSKLSKDPNEKRDHMVLLEFVTAAGITHGMDELYK"
 clustalw_path = r"C:\Program Files (x86)\ClustalW2\clustalw2.exe"
 
@@ -153,11 +156,14 @@ save_dir_data = Path("data_saved")
 save_dir_plots = Path(save_dir_data / "plots")
 save_dir_variable_data = Path(save_dir_data / "variable_data_etc")
 save_dir_structure_prediction = Path(save_dir_data / "structure_prediction")
+save_dir_wetlab = Path(save_dir_data / "wet_lab_results")
 save_dir_maestro = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_Picobodies\Maestro_Pred_Strc_Picobodies")
 
 save_dir_esm = Path(save_dir_structure_prediction / "esm_fold")
 save_dir_boltz = Path(save_dir_structure_prediction / "boltz2")
 save_dir_af = Path(save_dir_structure_prediction / "af3")
+
+save_dir_wetlab_affinity = Path(save_dir_wetlab / "affinity_chromatography")
 
 save_dir_variable_data.mkdir(exist_ok=True)
 save_dir_plots.mkdir(exist_ok=True)
@@ -636,6 +642,25 @@ if MD_analysis_bool:
         print(f"[MD Analysis] Finished {run_name}")
 
 
+
+
+if wet_lab_analysis_bool:
+    print("\n--------------------wet lab Analysis--------------------")
+    affinity_data_all = {}
+
+    for csv_file in save_dir_wetlab_affinity.glob("*.csv"):
+        run_name = csv_file.stem
+        print(f"Loading {run_name}")
+
+        affinity_data_all[run_name] = load_akta_csv(csv_file)
+    print(f"Loaded {len(affinity_data_all)} chromatograms")
+
+    plot_affinity_chromatography_run(
+        data=affinity_data_all,
+        run_name="20260713 AffinityCaptureSelectBovLC mClover-V1 50mL 001",
+        signals=["UV", "Conductivity", "Conc B"],
+        save_path=save_dir_plots / "V1_affinity_chromatography.png",
+        title = "Affinity Chromatography mCloverV1")
 
 
 
