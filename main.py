@@ -657,8 +657,8 @@ if wet_lab_analysis_bool:
 
     plot_affinity_chromatography_run(
         data=affinity_data_all,
-        run_name="20260713 AffinityCaptureSelectBovLC mClover-V1 50mL 001",
-        signals=["UV", "Conductivity", "Conc B"],
+        run_name=["20260713 AffinityCaptureSelectBovLC mClover-V1 50mL 001",],
+        signals=["UV", "Conc B",],
         save_path=save_dir_plots / "V1_affinity_chromatography.png",
         title = "Affinity Chromatography mCloverV1")
 
