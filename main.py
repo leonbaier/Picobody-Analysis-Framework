@@ -89,11 +89,16 @@ DEBUG = False
 general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
-structure_prediction_analysis_bool = True # does not work if old pdb files are present
-MD_prep_bool = False
+structure_prediction_analysis_bool = False # does not work if old pdb files are present
+MD_prep_bool = True
 MD_analysis_bool = False
 
 selected_seqs_MD = [
+    {
+        "seq_id": "seq_25",
+        "model": "best",
+        "ligand": False,
+    },
     {
         "seq_id": "seq_1",
         "model": "best",
@@ -108,6 +113,11 @@ selected_seqs_MD = [
         "seq_id": "seq_78",
         "model": "best",
         "ligand": False,
+    },
+    {
+        "seq_id": "seq_25",
+        "model": "best",
+        "ligand": True,
     },
     {
         "seq_id": "seq_1",
