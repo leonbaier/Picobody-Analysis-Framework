@@ -4,13 +4,14 @@ import json
 from collections import defaultdict
 
 import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib import gridspec
-from matplotlib.colors import Normalize
+import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize, ListedColormap
+from matplotlib.patches import Patch
 from Bio import SeqIO
 from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB import PDBParser
-import pandas as pd
 
 
 def get_negative_binder_ids_from_vx_name(excel_path: Path, binders: str | list[str],
@@ -688,47 +689,57 @@ def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, compari
 
     # all without ligand first
     for seq_id in tested_ids:
-        ordered_rows.append((f"{seq_id} WO",
+        ordered_rows.append((f"{seq_id} -L",
             next(
                 v for k, v in stats_without.items()
                 if extract_seq_id(k) == seq_id
-            )
+            ), "tested"
         ))
 
     for seq_id in comparison_ids:
-        ordered_rows.append((f"{seq_id} WO",
+        ordered_rows.append((f"{seq_id} -L",
             next(
                 v for k, v in stats_without.items()
                 if extract_seq_id(k) == seq_id
-            )
+            ), "comparison"
         ))
 
     # spacer row
-    ordered_rows.append((" ", None))
+    ordered_rows.append((" ", None, "spacer"))
 
     # all chain A afterwards
     for seq_id in tested_ids:
-        ordered_rows.append((f"{seq_id} W",
+        ordered_rows.append((f"{seq_id} +L",
             next(
                 v for k, v in stats_chainA.items()
                 if extract_seq_id(k) == seq_id
-            )
+            ), "tested"
         ))
 
     for seq_id in comparison_ids:
-        ordered_rows.append((f"{seq_id} W",
+        ordered_rows.append((f"{seq_id} +L",
             next(
                 v for k, v in stats_chainA.items()
                 if extract_seq_id(k) == seq_id
-            )
+            ), "comparison"
         ))
 
+    group_ids = []
     labels = []
     plddt_arrays = []
     mean_plddt = []
 
-    for label, stats in ordered_rows:
+    for label, stats, group in ordered_rows:
         labels.append(label)
+        if group == "tested":
+            group_ids.append(0)
+
+        elif group == "comparison":
+            group_ids.append(1)
+
+        else:
+            group_ids.append(np.nan)
+
         if stats is None:
             plddt_arrays.append(np.array([]))
             mean_plddt.append(np.nan)
@@ -743,16 +754,60 @@ def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, compari
     for i, arr in enumerate(plddt_arrays):
         heatmap[i, :len(arr)] = arr
 
+    group_img = np.array(group_ids)[:, None]
+    group_img = np.ma.masked_invalid(group_img)
+    group_cmap = ListedColormap([
+        "royalblue",  # tested
+        "firebrick",  # comparison
+    ])
+    group_cmap.set_bad("white")
+
     fig = plt.figure(figsize=(12, 8))
     gs = gridspec.GridSpec(
-        1,
-        2,
-        width_ratios=[4, 0.8],
-        wspace=0.05,)
+        nrows=1,
+        ncols=3,
+        width_ratios=[0.3, 4, 0.7],  # mean panel narrower
+        wspace=0.03  # slightly tighter spacing
+    )
 
-    ax_heatmap = fig.add_subplot(gs[0])
-    ax_mean = fig.add_subplot(gs[1], sharey=ax_heatmap)
+    ax_group = fig.add_subplot(gs[0])
+    ax_heatmap = fig.add_subplot(gs[1], sharey=ax_group)
+    ax_mean = fig.add_subplot(gs[2], sharey=ax_group)
 
+    pos = ax_mean.get_position()
+    ax_mean.set_position((pos.x0 + 0.05, pos.y0, pos.width, pos.height,))
+
+    # group plot
+    ax_group.imshow(
+        group_img,
+        aspect="auto",
+        cmap=group_cmap,
+        interpolation="nearest",)
+
+    tick_positions = [
+        i for i, label in enumerate(labels)
+        if label.strip()]
+    tick_labels = [
+        label for label in labels
+        if label.strip()]
+    ax_group.set_yticks(tick_positions)
+    ax_group.set_yticklabels(tick_labels, fontsize=8,)
+    ax_group.tick_params(axis="y", which="major", length=6, width=1.2,)
+    ax_group.yaxis.tick_left()
+
+    ax_group.set_xticks([])
+
+    legend_handles = [
+        Patch(color="royalblue", label="Tested"),
+        Patch(color="firebrick", label="Comparison"),]
+    ax_group.legend(
+        handles=legend_handles,
+        loc="lower left",
+        bbox_to_anchor=(0.0, 1.02),
+        fontsize=8,
+        frameon=False,)
+
+    # heatmap
     im = ax_heatmap.imshow(
         heatmap,
         aspect="auto",
@@ -761,11 +816,15 @@ def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, compari
         vmax=100,
         interpolation="nearest",)
 
-    ax_heatmap.set_yticks(np.arange(len(labels)))
-    ax_heatmap.set_yticklabels(labels, fontsize=8,)
+    plt.setp(ax_heatmap.get_yticklabels(), visible=False,)
+    ax_heatmap.tick_params(
+        axis="y",
+        left=False,
+        labelleft=False,)
     ax_heatmap.set_xlabel("Residue position")
     ax_heatmap.set_title("Residue-wise pLDDT")
 
+    # mean plot
     ax_mean.barh(
         np.arange(len(mean_plddt)),
         mean_plddt,
@@ -776,8 +835,18 @@ def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, compari
 
     ax_mean.set_xlim(0, 100)
     ax_mean.set_xlabel("Mean pLDDT")
+    ax_mean.set_title("Mean")
 
     plt.setp(ax_mean.get_yticklabels(), visible=False)
+    ax_mean.tick_params(
+        axis="y",
+        which="both",
+        left=False,
+        labelleft=False,
+    )
+
+    ax_group.set_ylim(ax_heatmap.get_ylim())
+    ax_mean.set_ylim(ax_heatmap.get_ylim())
 
     cbar = fig.colorbar(
         im,
