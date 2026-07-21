@@ -60,6 +60,8 @@ print("Minimizing...")
 simulation.minimizeEnergy(maxIterations=10000)
 state = simulation.context.getState(getEnergy=True)
 print("Minimized energy:", state.getPotentialEnergy())
+with open("log.txt", "w") as f:
+    f.write(f"# Minimized energy: {state.getPotentialEnergy()}\n")
 
 # store initial structure
 state = simulation.context.getState(getPositions=True)
@@ -83,27 +85,24 @@ simulation.reporters.append(CheckpointReporter( "checkpoint.chk", 10000000))
 
 # starts simulation (timesteps [2 fs] times steps is simulated time)
 print("Starts simulation...")
-print("Equilibration phase 1")
-# simulation.step(500000)  # 1 ns
+print("Equilibration phase 1 (k=100)")
+simulation.step(500000)  # 1 ns
 
-for i in range(500):
-    simulation.step(1000)
-    state = simulation.context.getState(getEnergy=True, getPositions=True)
+print("Equilibration phase 2 (k=50)")
+simulation.context.setParameter("k", 50.0)
+simulation.step(500000)  # 1 ns
 
-    energy = state.getPotentialEnergy()
-    print(f"Step {(i + 1) * 1000}: {energy}")
-
-print("Equilibration phase 2 (medium restraints)")
+print("Equilibration phase 3 (k=10)")
 simulation.context.setParameter("k", 10.0)
 simulation.step(500000)  # 1 ns
 
-print("Equilibration phase 3 (weak restraints)")
+print("Equilibration phase 4 (k=1)")
 simulation.context.setParameter("k", 1.0)
 simulation.step(500000)  # 1 ns
 
 print("Production run")
 simulation.context.setParameter("k", 0.0)
-simulation.step(98500000)
+simulation.step(98000000)
 
 positions = simulation.context.getState(getPositions=True).getPositions()
 
