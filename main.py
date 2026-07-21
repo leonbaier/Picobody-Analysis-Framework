@@ -93,9 +93,9 @@ general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
-MD_prep_bool = False
-MD_analysis_bool = False
-wet_lab_analysis_bool = True
+MD_prep_bool = True
+MD_analysis_bool = True
+wet_lab_analysis_bool = False
 
 selected_seqs_MD = [
     {

@@ -20,7 +20,7 @@ forcefield = ForceField('amber14-all.xml', 'amber14/tip3p.xml')
 
 # creates waterbox
 modeller = Modeller(pdb.topology, pdb.positions)
-modeller.addSolvent(forcefield, padding=1.0*nanometer)
+modeller.addSolvent(forcefield, padding=1.2*nanometer)
 
 # create system from solvated model
 system = forcefield.createSystem(
@@ -31,7 +31,7 @@ system = forcefield.createSystem(
 
 # Backbone restraints (pull stronger back if farther away)
 restraint = CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2)")
-restraint.addGlobalParameter("k", 1000.0) # initial k
+restraint.addGlobalParameter("k", 100.0) # initial k
 
 restraint.addPerParticleParameter("x0")
 restraint.addPerParticleParameter("y0")
@@ -39,9 +39,8 @@ restraint.addPerParticleParameter("z0")
 
 for atom in modeller.topology.atoms():
     if atom.name in ["N", "CA", "C"]:
-        pos = modeller.positions[atom.index]
-        restraint.addParticle(atom.index,
-            [pos.x.value_in_unit(nanometer), pos.y.value_in_unit(nanometer), pos.z.value_in_unit(nanometer)])
+        pos = modeller.positions[atom.index].value_in_unit(nanometer)
+        restraint.addParticle(atom.index, [pos[0], pos[1], pos[2]])
 system.addForce(restraint)
 
 # defines dynamics (T, friction, timestep) and device
@@ -51,13 +50,16 @@ platform = Platform.getPlatformByName('CUDA')
 # creates simulation from structure, force field, dynamics, and device; sets start coordinates
 simulation = Simulation(modeller.topology, system, integrator, platform)
 simulation.context.setPositions(modeller.positions)
+print("Number of particles:", system.getNumParticles())
 
 # track time
 start_walltime = time.time()
 
 # minimize energy (if structure has bad geometry, steric conflicts,...)
 print("Minimizing...")
-simulation.minimizeEnergy()
+simulation.minimizeEnergy(maxIterations=10000)
+state = simulation.context.getState(getEnergy=True)
+print("Minimized energy:", state.getPotentialEnergy())
 
 # store initial structure
 state = simulation.context.getState(getPositions=True)
@@ -81,15 +83,22 @@ simulation.reporters.append(CheckpointReporter( "checkpoint.chk", 10000000))
 
 # starts simulation (timesteps [2 fs] times steps is simulated time)
 print("Starts simulation...")
-print("Equilibration phase 1 (strong restraints)")
-simulation.step(500000)  # 1 ns
+print("Equilibration phase 1")
+# simulation.step(500000)  # 1 ns
+
+for i in range(500):
+    simulation.step(1000)
+    state = simulation.context.getState(getEnergy=True, getPositions=True)
+
+    energy = state.getPotentialEnergy()
+    print(f"Step {(i + 1) * 1000}: {energy}")
 
 print("Equilibration phase 2 (medium restraints)")
-simulation.context.setParameter("k", 100.0)
+simulation.context.setParameter("k", 10.0)
 simulation.step(500000)  # 1 ns
 
 print("Equilibration phase 3 (weak restraints)")
-simulation.context.setParameter("k", 10.0)
+simulation.context.setParameter("k", 1.0)
 simulation.step(500000)  # 1 ns
 
 print("Production run")
