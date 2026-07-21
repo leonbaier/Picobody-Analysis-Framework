@@ -146,7 +146,7 @@ def create_conditions_file(run_dir: Path, output_dir: Path, run_name: str,
 
     initial_k = re.search(r'addGlobalParameter\("k",\s*([0-9.]+)\)', python_text,)
     k_values = re.findall(r'setParameter\("k",\s*([0-9.]+)\)', python_text,)
-    restraint_schedule = "Unknown"
+    restraint_schedule = "None"
 
     if initial_k:
         schedule = [initial_k.group(1)] + k_values
@@ -292,7 +292,7 @@ Constraints:
 Backbone restraints
 -------------------
 Initial k:
-{initial_k.group(1) if initial_k else "Unknown"}
+{initial_k.group(1) if initial_k else "None"}
 
 Restraint schedule:
 {restraint_schedule}
