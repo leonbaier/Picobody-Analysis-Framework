@@ -686,32 +686,54 @@ def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, compari
 ):
     ordered_rows = []
 
+    # all without ligand first
     for seq_id in tested_ids:
         ordered_rows.append((f"{seq_id} WO",
-                             next(v for k, v in stats_without.items()
-                                  if extract_seq_id(k) == seq_id)))
-
-        ordered_rows.append((f"{seq_id} A",
-                             next(v for k, v in stats_chainA.items()
-                                  if extract_seq_id(k) == seq_id)))
+            next(
+                v for k, v in stats_without.items()
+                if extract_seq_id(k) == seq_id
+            )
+        ))
 
     for seq_id in comparison_ids:
         ordered_rows.append((f"{seq_id} WO",
-                             next(v for k, v in stats_without.items()
-                                  if extract_seq_id(k) == seq_id)))
+            next(
+                v for k, v in stats_without.items()
+                if extract_seq_id(k) == seq_id
+            )
+        ))
 
-        ordered_rows.append((f"{seq_id} A",
-                             next(v for k, v in stats_chainA.items()
-                                  if extract_seq_id(k) == seq_id)))
+    # spacer row
+    ordered_rows.append((" ", None))
+
+    # all chain A afterwards
+    for seq_id in tested_ids:
+        ordered_rows.append((f"{seq_id} W",
+            next(
+                v for k, v in stats_chainA.items()
+                if extract_seq_id(k) == seq_id
+            )
+        ))
+
+    for seq_id in comparison_ids:
+        ordered_rows.append((f"{seq_id} W",
+            next(
+                v for k, v in stats_chainA.items()
+                if extract_seq_id(k) == seq_id
+            )
+        ))
 
     labels = []
     plddt_arrays = []
     mean_plddt = []
 
     for label, stats in ordered_rows:
-        arr = load_plddt_array(stats["plddt_path"])
-
         labels.append(label)
+        if stats is None:
+            plddt_arrays.append(np.array([]))
+            mean_plddt.append(np.nan)
+            continue
+        arr = load_plddt_array(stats["plddt_path"])
         plddt_arrays.append(arr)
         mean_plddt.append(arr.mean())
 

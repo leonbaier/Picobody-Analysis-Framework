@@ -489,6 +489,7 @@ if structure_prediction_analysis_bool:
         }),
     ]
 
+    # plddt mean plots
     for ligand_state, mapping in CONDITIONS:
         print(f"\n------Mean comparison ({ligand_state})------")
 
@@ -512,8 +513,7 @@ if structure_prediction_analysis_bool:
         plot_mean_plddt_multi_models(
             stats_dict,
             labels=list(stats_dict.keys()),
-            save_path=(save_dir_plots /
-                       f"plddt_mean_comparison_{ligand_state.replace(' ', '_')}.png"),
+            save_path=(save_dir_plots / f"plddt_mean_comparison_{ligand_state.replace(' ', '_')}.png"),
             display_index=display_index,
             max_structure_index=max(display_index.values()),
             title=ligand_state,)
