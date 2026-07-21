@@ -1198,3 +1198,118 @@ def extract_chain_from_pdb(pdb_path, target_chain="A"):
                 residues.append(res)
 
     return len(residues)
+
+
+def plot_mean_plddt_groups(stats_without, stats_chainA, tested_ids, comparison_ids, save_path=None, model_name=None,
+):
+    labels = []
+    means = []
+    colors = []
+
+    # --- without ligand ---
+    for seq_id in tested_ids:
+        stats = next(
+            v for k, v in stats_without.items()
+            if extract_seq_id(k) == seq_id
+        )
+
+        labels.append(f"{seq_id} -L")
+        means.append(stats["mean"])
+        colors.append("royalblue")
+
+    for seq_id in comparison_ids:
+        stats = next(
+            v for k, v in stats_without.items()
+            if extract_seq_id(k) == seq_id
+        )
+
+        labels.append(f"{seq_id} -L")
+        means.append(stats["mean"])
+        colors.append("firebrick")
+
+    # spacer
+    labels.append("")
+    means.append(np.nan)
+    colors.append("white")
+
+    # --- with ligand chain A ---
+    for seq_id in tested_ids:
+        stats = next(
+            v for k, v in stats_chainA.items()
+            if extract_seq_id(k) == seq_id
+        )
+
+        labels.append(f"{seq_id} +L")
+        means.append(stats["mean"])
+        colors.append("royalblue")
+
+    for seq_id in comparison_ids:
+        stats = next(
+            v for k, v in stats_chainA.items()
+            if extract_seq_id(k) == seq_id
+        )
+
+        labels.append(f"{seq_id} +L")
+        means.append(stats["mean"])
+        colors.append("firebrick")
+
+    y = np.arange(len(labels))
+
+    fig, ax = plt.subplots(
+        figsize=(6, 8)
+    )
+
+    for yi, mean, color in zip(y, means, colors):
+
+        if np.isnan(mean):
+            continue
+
+        ax.barh(
+            yi,
+            mean,
+            color=color,
+            alpha=0.8,
+        )
+
+    ax.axvline(
+        70,
+        color="red",
+        linestyle="--",
+    )
+
+    ax.set_xlim(0, 100)
+
+    ax.set_yticks(
+        [i for i, l in enumerate(labels) if l]
+    )
+
+    ax.set_yticklabels(
+        [l for l in labels if l],
+        fontsize=8,
+    )
+
+    ax.set_xlabel("Mean pLDDT")
+    ax.set_title(f"{model_name}: tested vs comparison")
+
+    legend_handles = [
+        Patch(color="royalblue", label="Tested"),
+        Patch(color="firebrick", label="Comparison"),
+    ]
+
+    ax.legend(
+        handles=legend_handles,
+        frameon=False,
+    )
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(
+            save_path,
+            dpi=300,
+            bbox_inches="tight",
+        )
+    else:
+        plt.show()
+
+    plt.close()

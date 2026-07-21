@@ -64,6 +64,7 @@ from structure_prediction_analysis import (
     build_af_model_to_cluster,
     filter_plddt_stats_by_ids,
     plot_plddt_landscape_groups,
+    plot_mean_plddt_groups,
     build_global_display_order,
     plot_mean_plddt_multi_models,
     collect_esm_chain_models,
@@ -475,6 +476,18 @@ if structure_prediction_analysis_bool:
                         comparison_ids=pure_comparison_ids,
                         save_path=(save_dir_plots / f"{model_name}_tested_vs_comparison.png"),
                         model_name=cfg["label"],)
+
+                    plot_mean_plddt_groups(
+                        stats_without=subset_without,
+                        stats_chainA=subset_chain,
+                        tested_ids=pure_tested_ids,
+                        comparison_ids=pure_comparison_ids,
+                        save_path=(
+                                save_dir_plots /
+                                f"{model_name}_tested_vs_comparison_mean.png"
+                        ),
+                        model_name=cfg["label"],
+                    )
 
     CONDITIONS = [
         ("without ligand", {
