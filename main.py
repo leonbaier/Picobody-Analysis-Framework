@@ -92,53 +92,22 @@ DEBUG = False
 general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
-structure_prediction_analysis_bool = False # does not work if old pdb files are present
-MD_prep_bool = True
-MD_analysis_bool = True
+structure_prediction_analysis_bool = True # does not work if old pdb files are present
+MD_prep_bool = False
+MD_analysis_bool = False
 wet_lab_analysis_bool = False
 
-selected_seqs_MD = [
-    {
-        "seq_id": "seq_25",
-        "model": "best",
-        "ligand": False,
-    },
-    {
-        "seq_id": "seq_1",
-        "model": "best",
-        "ligand": False,
-    },
-    {
-        "seq_id": "seq_12",
-        "model": "best",
-        "ligand": False,
-    },
-    {
-        "seq_id": "seq_78",
-        "model": "best",
-        "ligand": False,
-    },
-    {
-        "seq_id": "seq_25",
-        "model": "best",
-        "ligand": True,
-    },
-    {
-        "seq_id": "seq_1",
-        "model": "best",
-        "ligand": True,
-    },
-    {
-        "seq_id": "seq_12",
-        "model": "best",
-        "ligand": True,
-    },
-    {
-        "seq_id": "seq_78",
-        "model": "best",
-        "ligand": True,
-    },
-]
+# ---------------Configuration-----------------------
+
+# choose sequences for structure prediction plddt comparison plots
+experimental_tested_variant_v = "v1"
+experimental_tested_variant_seq = ["seq_1", "seq_12", "seq_78",]
+
+comparison_variant_v = ["v5" ,"v8", "v9", "v11",]
+comparison_variant_seq = []
+
+# choose for which of the sequences above MDs are prepared (choose from "comparison", "tested", "both")
+md_selection_mode = "tested"
 
 
 # ---------------Paths--------------------------
@@ -373,18 +342,20 @@ if structure_prediction_prep_bool:
 
 if structure_prediction_analysis_bool:
     print("\n--------------------Structure Prediction Analysis--------------------")
+
+    # setup
     neg_ids_for_comparison = get_negative_binder_ids_from_vx_name(
         save_dir_variable_data / "clustering_summary.xlsx",
-        ["v5", "v8", "v9", "v11"])
+        comparison_variant_v)
     tested_id_v1 = get_negative_binder_ids_from_vx_name(
         save_dir_variable_data / "clustering_summary.xlsx",
-        "v1")
+        experimental_tested_variant_v)
 
     pure_comparison_ids, pure_tested_ids = build_comparison_and_tested_id_sets(
         comparison_ids=list(neg_ids_for_comparison.values()),
         tested_ids=list(tested_id_v1.values()),
-        additional_comparison_ids=[],
-        additional_tested_ids=["seq_1", "seq_12", "seq_78",])
+        additional_comparison_ids=comparison_variant_seq,
+        additional_tested_ids=experimental_tested_variant_seq)
 
     MODEL_CONFIGS = {
         "esm": {
@@ -434,6 +405,7 @@ if structure_prediction_analysis_bool:
     clusters = load_clusters(save_dir_variable_data / "clusters.pkl")
     display_index = build_global_display_order(clusters)
 
+    # plddt landscape plots
     for model_name, cfg in MODEL_CONFIGS.items():
 
         subset_without = None
@@ -457,16 +429,16 @@ if structure_prediction_analysis_bool:
 
             suffix = cfg["suffix_clean"](run_dir)
 
+            # normal plddt landscape with and without ligand
             plot_plddt_landscape(
                 plddt_stats,
                 model_to_cluster,
                 display_index=display_index,
                 save_path=(save_dir_plots / f"plddt_landscape_{suffix}.png"),
                 max_residue_len=global_max_len,
-                model_name=f"{cfg['label']} ({ligand_state})"
-            )
+                model_name=f"{cfg['label']} ({ligand_state})")
 
-            # CHAIN-ONLY (without mClover)
+            # if without mClover, chain-only plddt landscape and then also comparison plddt landscape
             if "with_ligand" in run_dir:
                 print(f"------{cfg['label']} ({ligand_state}) CHAIN A------")
 
@@ -485,6 +457,7 @@ if structure_prediction_analysis_bool:
                     if normalize_model_id(mid) in full_mapping
                 }
 
+                # chain-only plddt landscape
                 plot_plddt_landscape(
                     chain_stats,
                     model_to_cluster_chain,
@@ -493,6 +466,7 @@ if structure_prediction_analysis_bool:
                     max_residue_len=None,
                     model_name=f"{cfg['label']} ({ligand_state}, chain A)")
 
+                # comparison plddt landscape
                 if subset_without is not None and subset_chain is not None:
                     plot_plddt_landscape_groups(
                         stats_without=subset_without,
@@ -516,7 +490,6 @@ if structure_prediction_analysis_bool:
     ]
 
     for ligand_state, mapping in CONDITIONS:
-
         print(f"\n------Mean comparison ({ligand_state})------")
 
         stats_dict = {}
@@ -530,12 +503,12 @@ if structure_prediction_analysis_bool:
             stats = cfg["collector"](full_path)
             stats_dict[label] = stats
 
-            # --- nur wenn ligand ---
+            # --- only with ligand ---
             if "with_ligand" in run_dir:
                 stats_chain = cfg["collector_chain"](full_path)
                 stats_chain_dict[label] = stats_chain
 
-        # normal plot
+        # normal plddt mean plot
         plot_mean_plddt_multi_models(
             stats_dict,
             labels=list(stats_dict.keys()),
@@ -543,24 +516,54 @@ if structure_prediction_analysis_bool:
                        f"plddt_mean_comparison_{ligand_state.replace(' ', '_')}.png"),
             display_index=display_index,
             max_structure_index=max(display_index.values()),
-            title=ligand_state,
-        )
+            title=ligand_state,)
 
-        # chain-only plot
+        # chain-only plddt mean plot
         if stats_chain_dict:
             plot_mean_plddt_multi_models(
                 stats_chain_dict,
                 labels=list(stats_chain_dict.keys()),
-                save_path=(save_dir_plots /
-                           f"plddt_mean_comparison_{ligand_state.replace(' ', '_')}_chainA.png"),
+                save_path=(save_dir_plots / f"plddt_mean_comparison_{ligand_state.replace(' ', '_')}_chainA.png"),
                 display_index=display_index,
                 max_structure_index=max(display_index.values()),
-                title=f"{ligand_state} (chain A)",
-            )
+                title=f"{ligand_state} (chain A)",)
 
 
 if MD_prep_bool:
     print("\n--------------------MD Prep--------------------")
+    # setup
+    neg_ids_for_comparison = get_negative_binder_ids_from_vx_name(
+        save_dir_variable_data / "clustering_summary.xlsx",
+        comparison_variant_v)
+    tested_id_v1 = get_negative_binder_ids_from_vx_name(
+        save_dir_variable_data / "clustering_summary.xlsx",
+        experimental_tested_variant_v)
+
+    pure_comparison_ids, pure_tested_ids = build_comparison_and_tested_id_sets(
+        comparison_ids=list(neg_ids_for_comparison.values()),
+        tested_ids=list(tested_id_v1.values()),
+        additional_comparison_ids=comparison_variant_seq,
+        additional_tested_ids=experimental_tested_variant_seq)
+
+    if md_selection_mode == "comparison":
+        md_ids = pure_comparison_ids
+    elif md_selection_mode == "tested":
+        md_ids = pure_tested_ids
+    elif md_selection_mode == "both":
+        md_ids = pure_comparison_ids + pure_tested_ids
+    else:
+        raise ValueError(f"Unknown md_selection_mode: {md_selection_mode}")
+
+    selected_seqs_MD = [
+        {
+            "seq_id": seq_id,
+            "model": "best",
+            "ligand": ligand,
+        }
+        for seq_id in md_ids
+        for ligand in (False, True)
+    ]
+
     archive_and_clean_md_root(md_root, archive_root)
 
     MODEL_DATABASE = {

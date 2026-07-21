@@ -29,20 +29,6 @@ system = forcefield.createSystem(
     nonbondedCutoff=1.0*nanometer,
     constraints=HBonds)
 
-# Backbone restraints (pull stronger back if farther away)
-restraint = CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2)")
-restraint.addGlobalParameter("k", 100.0) # initial k
-
-restraint.addPerParticleParameter("x0")
-restraint.addPerParticleParameter("y0")
-restraint.addPerParticleParameter("z0")
-
-for atom in modeller.topology.atoms():
-    if atom.name in ["N", "CA", "C"]:
-        pos = modeller.positions[atom.index].value_in_unit(nanometer)
-        restraint.addParticle(atom.index, [pos[0], pos[1], pos[2]])
-system.addForce(restraint)
-
 # defines dynamics (T, friction, timestep) and device
 integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
 platform = Platform.getPlatformByName('CUDA')
@@ -60,6 +46,8 @@ print("Minimizing...")
 simulation.minimizeEnergy(maxIterations=10000)
 state = simulation.context.getState(getEnergy=True)
 print("Minimized energy:", state.getPotentialEnergy())
+with open("log.txt", "w") as f:
+    f.write(f"# Minimized energy: {state.getPotentialEnergy()}\n")
 
 # store initial structure
 state = simulation.context.getState(getPositions=True)
@@ -82,28 +70,8 @@ simulation.reporters.append(DCDReporter("trajectory.dcd",50000))
 simulation.reporters.append(CheckpointReporter( "checkpoint.chk", 10000000))
 
 # starts simulation (timesteps [2 fs] times steps is simulated time)
-print("Starts simulation...")
-print("Equilibration phase 1")
-# simulation.step(500000)  # 1 ns
-
-for i in range(500):
-    simulation.step(1000)
-    state = simulation.context.getState(getEnergy=True, getPositions=True)
-
-    energy = state.getPotentialEnergy()
-    print(f"Step {(i + 1) * 1000}: {energy}")
-
-print("Equilibration phase 2 (medium restraints)")
-simulation.context.setParameter("k", 10.0)
-simulation.step(500000)  # 1 ns
-
-print("Equilibration phase 3 (weak restraints)")
-simulation.context.setParameter("k", 1.0)
-simulation.step(500000)  # 1 ns
-
 print("Production run")
-simulation.context.setParameter("k", 0.0)
-simulation.step(98500000)
+simulation.step(100000000)
 
 positions = simulation.context.getState(getPositions=True).getPositions()
 
