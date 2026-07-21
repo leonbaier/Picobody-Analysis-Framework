@@ -83,8 +83,8 @@ def load_akta_csv(csv_path: str | Path) -> dict:
     return result
 
 
-def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], signals: list[str], save_path=None,
-        title: str | None = None,
+def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], signals: list[str],
+                                     run_display_names: list[str] | None = None, save_path=None, title: str | None = None,
 ):
     """
     Plot affinity chromatography data.csv (äkta output).
@@ -95,7 +95,9 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         Dictionary returned by load_akta_csv().
 
     run_name : str | list[str]
-        Single run name or a list of run names.
+        Single run name or a list of run names. If list then all variables of a single run ae plotted in the same color.
+        Single run mode is more complex with many plotting possibilities like different colors for different variables
+        and also the ability to plot categorical variables.
 
     signals : list[str]
         Signals to plot.
@@ -106,6 +108,10 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
 
         When multiple runs are supplied, only the requested
         signals are overlaid for all runs.
+
+    run_display_names : list[str] | None
+        Optional display names for runs when plotting multiple runs.
+        Must have the same length as run_name if provided.
 
     save_path : Path | str | None
         Output path. If None, plot is displayed.
@@ -119,11 +125,26 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
     in the same figure for direct comparison.
     """
 
-    if isinstance(run_name, (list, tuple)):
+    if isinstance(run_name, (list, tuple)):  # if list the only this block is performed otherwise skip
 
         fig, ax = plt.subplots(figsize=(12, 6))
 
-        colors = plt.cm.tab10.colors
+        run_colors = plt.cm.tab10.colors
+
+        signal_styles = {
+            "UV": "-",
+            "Conductivity": "--",
+            "Conc B": ":",
+        }
+
+        multiple_runs = len(run_name) > 1
+        multiple_signals = len(signals) > 1
+
+        if run_display_names is not None:
+            if len(run_display_names) != len(run_name):
+                raise ValueError(
+                    "run_display_names must have same length as run_name."
+                )
 
         for i, run in enumerate(run_name):
 
@@ -131,6 +152,12 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                 raise KeyError(f"Run '{run}' not found.")
 
             run_data = data[run]
+
+            display_run = (
+                run_display_names[i]
+                if run_display_names is not None
+                else run
+            )
 
             for signal in signals:
 
@@ -144,20 +171,35 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                 if signal_data.get("type") != "numeric":
                     continue
 
+                linestyle = signal_styles.get(signal, "-")
+
+                if multiple_runs:
+                    if multiple_signals:
+                        label = f"{display_run} - {signal}"
+                    else:
+                        label = display_run
+                else:
+                    label = signal
+
                 ax.plot(
                     signal_data["x"],
                     signal_data["y"],
-                    label=f"{run} - {signal}",
-                    color=colors[i % len(colors)],
+                    label=label,
+                    color=run_colors[i % len(run_colors)],
+                    linestyle=linestyle,
                     linewidth=2.5,
                 )
 
         first_run = run_name[0]
         first_signal = signals[0]
+
         ax.set_xlabel("Volume (ml)")
+
         ax.set_ylabel(
             f"{first_signal} "
-            f"({data[first_run][first_signal]['y_label']})")
+            f"({data[first_run][first_signal]['y_label']})"
+        )
+
         ax.grid(alpha=0.3)
 
         if title is None:
@@ -235,7 +277,6 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
 
     # ---------- numeric signals ----------
     for i, signal in enumerate(numeric_signals):
-
         signal_data = run_data[signal]
 
         ax = axes[min(i, len(axes) - 1)]
@@ -283,7 +324,6 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                 signal_data["x"],
                 signal_data["labels"]
         ):
-
             ax1.axvline(
                 x,
                 color="grey",
