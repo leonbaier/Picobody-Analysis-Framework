@@ -46,8 +46,6 @@ print("Minimizing...")
 simulation.minimizeEnergy(maxIterations=10000)
 state = simulation.context.getState(getEnergy=True)
 print("Minimized energy:", state.getPotentialEnergy())
-with open("log.txt", "w") as f:
-    f.write(f"# Minimized energy: {state.getPotentialEnergy()}\n")
 
 # store initial structure
 state = simulation.context.getState(getPositions=True)

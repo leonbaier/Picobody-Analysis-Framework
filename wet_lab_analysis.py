@@ -1,3 +1,6 @@
+import re
+
+import numpy as np
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -85,6 +88,7 @@ def load_akta_csv(csv_path: str | Path) -> dict:
 
 def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], signals: list[str],
                                      run_display_names: list[str] | None = None, save_path=None, title: str | None = None,
+                                     fraction_filter: list[tuple[str, str]] | None = None
 ):
     """
     Plot affinity chromatography data.csv (äkta output).
@@ -316,33 +320,48 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
     # ---------- categorical signals ----------
     ymax = ax1.get_ylim()[1]
 
-    for signal in categorical_signals:
+    def fraction_in_ranges(fraction_label: str, ranges: list[tuple[str, str]],
+    ) -> bool:
 
+        for start, end in ranges:
+            if start <= fraction_label <= end:
+                return True
+
+        return False
+
+    for signal in categorical_signals:
         signal_data = run_data[signal]
 
-        for x, label in zip(
-                signal_data["x"],
-                signal_data["labels"]
-        ):
-            ax1.axvline(
-                x,
-                color="grey",
-                linestyle="--",
-                linewidth=1.2,
-                alpha=0.35,
-                zorder=0,
+        selected_x = []
+
+        for x, label in zip(signal_data["x"], signal_data["labels"]):
+            if fraction_filter is not None and not fraction_in_ranges(str(label), fraction_filter):
+                continue
+
+            selected_x.append(x)
+
+        if selected_x:
+            x_center = (
+                               min(selected_x)
+                               + max(selected_x)
+                       ) / 2
+
+            ax1.axvspan(
+                min(selected_x),
+                max(selected_x),
+                color="gold",
+                alpha=0.25,
             )
 
             ax1.text(
-                x,
-                ymax,
-                str(label),
-                rotation=90,
-                fontsize=7,
+                x_center,
+                ymax * 0.95,
+                "Collected fractions",
                 ha="center",
                 va="top",
-                color="grey",
-                clip_on=True,
+                fontsize=10,
+                fontweight="bold",
+                color="darkred",
             )
 
     ax1.set_xlabel("Volume (ml)")

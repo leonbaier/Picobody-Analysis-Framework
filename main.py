@@ -93,10 +93,10 @@ DEBUG = False
 general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
-structure_prediction_analysis_bool = True # does not work if old pdb files are present
-MD_prep_bool = False
+structure_prediction_analysis_bool = False # does not work if old pdb files are present
+MD_prep_bool = True
 MD_analysis_bool = False
-wet_lab_analysis_bool = False
+wet_lab_analysis_bool = True
 
 # ---------------Configuration-----------------------
 
@@ -674,7 +674,8 @@ if wet_lab_analysis_bool:
     plot_affinity_chromatography_run(
         data=affinity_data_all,
         run_name="20260713 AffinityCaptureSelectBovLC mClover-V1 50mL 001",
-        signals=["UV", "Conc B",],
+        signals=["UV", "Conc B", "Fraction"],
+        fraction_filter=[("1.A.2", "1.A.5")],
         save_path=save_dir_plots / "V1_affinity_chromatography.png",
         title = "Affinity Chromatography mCloverV1")
 
