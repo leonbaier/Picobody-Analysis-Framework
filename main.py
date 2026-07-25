@@ -94,7 +94,7 @@ general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
-MD_prep_bool = True
+MD_prep_bool = False
 MD_analysis_bool = False
 wet_lab_analysis_bool = True
 
@@ -134,6 +134,7 @@ save_dir_boltz = Path(save_dir_structure_prediction / "boltz2")
 save_dir_af = Path(save_dir_structure_prediction / "af3")
 
 save_dir_wetlab_affinity = Path(save_dir_wetlab / "affinity_chromatography")
+save_dir_wetlab_sec = Path(save_dir_wetlab / "SEC_chromatography")
 
 save_dir_variable_data.mkdir(exist_ok=True)
 save_dir_plots.mkdir(exist_ok=True)
@@ -673,11 +674,36 @@ if wet_lab_analysis_bool:
 
     plot_affinity_chromatography_run(
         data=affinity_data_all,
-        run_name="20260713 AffinityCaptureSelectBovLC mClover-V1 50mL 001",
+        run_name="20260713_AffinityCaptureSelectBovLC_mCloverV1_50mL",
         signals=["UV", "Conc B", "Fraction"],
         fraction_filter=[("1.A.2", "1.A.5")],
         save_path=save_dir_plots / "V1_affinity_chromatography.png",
         title = "Affinity Chromatography mCloverV1")
+    plot_affinity_chromatography_run(
+        data=affinity_data_all,
+        run_name=["20260713_AffinityCaptureSelectBovLC_mCloverV1_50mL", "20260722_AffinityCaptureSelectBovLC_mCloverV12_50ml",
+                  "20260722_AffinityCaptureSelectBovLC_mCloverV13_2_50ml", "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml"],
+        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14"],
+        signals=["UV", "Conc B"],
+        save_path=save_dir_plots / "affinity_chromatography_all.png",
+        title="Affinity Chromatography mCloverV1/12/13/14")
+
+    sec_data_all = {}
+
+    for csv_file in save_dir_wetlab_sec.glob("*.csv"):
+        run_name = csv_file.stem
+        print(f"Loading {run_name}")
+
+        sec_data_all[run_name] = load_akta_csv(csv_file)
+    print(f"Loaded {len(sec_data_all)} chromatograms")
+    plot_affinity_chromatography_run(
+        data=sec_data_all,
+        run_name=["20260723_Superose 6 Increase 10300  mCloverV1", "20260529_Superose 6 Increase mCloverV12",
+                  "20260724_Superose 6 Increase 10300 mCloverV13", "20260724_Superose 6 Increase 10300 mCloverV14"],
+        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14"],
+        signals=["UV"],
+        save_path=save_dir_plots / "sec_chromatography_all.png",
+        title="Size Exlcusion Chromatography mCloverV1/12/13/14")
 
 
 
