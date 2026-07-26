@@ -132,6 +132,10 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
     if isinstance(run_name, (list, tuple)):  # if list the only this block is performed otherwise skip
 
         fig, ax = plt.subplots(figsize=(12, 6))
+        common_max_x = min(
+            np.max(data[run][signals[0]]["x"])
+            for run in run_name
+        )
 
         run_colors = plt.cm.tab10.colors
 
@@ -198,6 +202,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         first_signal = signals[0]
 
         ax.set_xlabel("Volume (ml)")
+        ax.set_xlim(0, common_max_x)
 
         ax.set_ylabel(
             f"{first_signal} "
