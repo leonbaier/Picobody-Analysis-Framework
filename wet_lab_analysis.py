@@ -5,17 +5,43 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-
 def load_akta_csv(csv_path: str | Path) -> dict:
 
-    df = pd.read_csv(
-        csv_path,
-        sep="\t",
-        header=None,
-        dtype=str,
-        engine="python",
-        encoding="utf-16",
-    )
+    encodings = [
+        "utf-16",
+        "utf-8",
+        "utf-8-sig",
+        "cp1252",
+        "latin1",
+    ]
+
+    last_error = None
+
+    for encoding in encodings:
+
+        try:
+
+            df = pd.read_csv(
+                csv_path,
+                sep="\t",
+                header=None,
+                dtype=str,
+                engine="python",
+                encoding=encoding,
+            )
+
+            print(
+                f"Loaded '{csv_path.name}' "
+                f"using encoding '{encoding}'"
+            )
+
+            break
+
+        except UnicodeError as e:
+            last_error = e
+
+    else:
+        raise last_error
 
     signal_names = df.iloc[1]
     units = df.iloc[2]
@@ -388,3 +414,150 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         plt.show()
 
     plt.close()
+
+
+def load_sec_fraction_config(config_file):
+
+    df = pd.read_csv(config_file, sep=";")
+
+    selected_fractions = {}
+    concentrations = {}
+
+    for _, row in df.iterrows():
+
+        run = row["run"]
+        fraction = row["fraction"]
+        concentration = row["concentration_mg_ml"]
+
+        selected_fractions.setdefault(run, []).append(
+            fraction
+        )
+
+        concentrations.setdefault(run, {})[
+            fraction
+        ] = concentration
+
+    return selected_fractions, concentrations
+
+
+def report_sec_fractions(data: dict, config_file, fraction_signal: str = "Fraction", save_path=None,
+):
+
+    results = {}
+    export_rows = []
+
+    selected_fractions, concentrations = load_sec_fraction_config(config_file)
+
+    for run_name, run_data in data.items():
+
+        if fraction_signal not in run_data:
+            print(f"\n{run_name}: no fraction signal found")
+            continue
+
+        frac_data = run_data[fraction_signal]
+
+        x = frac_data["x"]
+        labels = frac_data["labels"]
+
+        run_fractions = (
+            selected_fractions.get(run_name)
+            if selected_fractions is not None
+            else None
+        )
+
+        run_concentrations = (
+            concentrations.get(run_name, {})
+            if concentrations is not None
+            else {}
+        )
+
+        print("\n" + "=" * 100)
+        print(run_name)
+        print("=" * 100)
+
+        total_protein_mg = 0
+        run_results = {}
+
+        for i in range(len(labels) - 1):
+
+            current_fraction = str(labels[i]).strip()
+
+            if current_fraction.lower() == "waste":
+                continue
+
+            if (
+                run_fractions is not None
+                and current_fraction not in run_fractions
+            ):
+                continue
+
+            volume_ml = float(x[i + 1] - x[i])
+
+            row = {
+                "run": run_name,
+                "fraction": current_fraction,
+                "volume_ml": volume_ml,
+            }
+
+            line = (
+                f"{current_fraction:>10s} | "
+                f"{volume_ml:6.2f} ml"
+            )
+
+            if current_fraction in run_concentrations:
+
+                conc = float(
+                    run_concentrations[current_fraction]
+                )
+
+                protein_mg = conc * volume_ml
+
+                total_protein_mg += protein_mg
+
+                row["concentration_mg_ml"] = conc
+                row["protein_mg"] = protein_mg
+
+                line += (
+                    f" | {conc:6.3f} mg/ml"
+                    f" | {protein_mg:6.3f} mg"
+                )
+
+            else:
+
+                row["concentration_mg_ml"] = np.nan
+                row["protein_mg"] = np.nan
+
+            print(line)
+
+            export_rows.append(row)
+            run_results[current_fraction] = row
+
+        print("-" * 100)
+        print(
+            f"Total protein amount: "
+            f"{total_protein_mg:.3f} mg"
+        )
+
+        export_rows.append({
+            "run": run_name,
+            "fraction": "TOTAL",
+            "volume_ml": np.nan,
+            "concentration_mg_ml": np.nan,
+            "protein_mg": total_protein_mg,
+        })
+
+        results[run_name] = run_results
+
+    if save_path is not None:
+
+        pd.DataFrame(export_rows).to_csv(
+            save_path,
+            sep=";",
+            index=False
+        )
+
+        print(
+            f"\nFraction report written to:\n{save_path}"
+        )
+
+    return results

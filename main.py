@@ -83,7 +83,8 @@ from MD_analysis import (
     create_binder_target_distance_analysis,)
 from wet_lab_analysis import (
     load_akta_csv,
-    plot_affinity_chromatography_run)
+    plot_affinity_chromatography_run,
+    report_sec_fractions)
 
 
 # ---------------Switches-----------------------
@@ -93,13 +94,12 @@ DEBUG = False
 general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
-structure_prediction_analysis_bool = True # does not work if old pdb files are present
+structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
-MD_analysis_bool = False
+MD_analysis_bool = True
 wet_lab_analysis_bool = True
 
 # ---------------Configuration-----------------------
-
 # choose sequences for structure prediction plddt comparison plots
 experimental_tested_variant_v = "v1"
 experimental_tested_variant_seq = ["seq_1", "seq_12", "seq_78",]
@@ -659,6 +659,8 @@ if MD_analysis_bool:
 
 if wet_lab_analysis_bool:
     print("\n--------------------wet lab Analysis--------------------")
+
+    # plot affinity chromatography results
     affinity_data_all = {}
 
     for csv_file in save_dir_wetlab_affinity.glob("*.csv"):
@@ -684,6 +686,7 @@ if wet_lab_analysis_bool:
         save_path=save_dir_plots / "affinity_chromatography_all.png",
         title="Affinity Chromatography mCloverV1/12/13/14")
 
+    # plot sec chromatography results
     sec_data_all = {}
 
     for csv_file in save_dir_wetlab_sec.glob("*.csv"):
@@ -692,14 +695,20 @@ if wet_lab_analysis_bool:
 
         sec_data_all[run_name] = load_akta_csv(csv_file)
     print(f"Loaded {len(sec_data_all)} chromatograms")
+
     plot_affinity_chromatography_run(
         data=sec_data_all,
-        run_name=["20260723_Superose 6 Increase 10300  mCloverV1", "20260529_Superose 6 Increase mCloverV12",
-                  "20260724_Superose 6 Increase 10300 mCloverV13", "20260724_Superose 6 Increase 10300 mCloverV14"],
+        run_name=["20260723_Superose_6_Increase_mCloverV1", "20260723_Superose_6_Increase_mCloverV12",
+                  "20260724_Superose_6_Increase_mCloverV13", "20260724_Superose_6_Increase_mCloverV14"],
         run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14"],
         signals=["UV"],
         save_path=save_dir_plots / "sec_chromatography_all.png",
         title="Size Exlcusion Chromatography mCloverV1/12/13/14")
+
+    report_sec_fractions(
+        data=sec_data_all,
+        config_file=save_dir_wetlab_sec / "sec_fraction_config.csv",
+        save_path=save_dir_variable_data / "sec_fraction_report.csv",)
 
 
 
