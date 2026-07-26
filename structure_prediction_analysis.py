@@ -1288,6 +1288,7 @@ def plot_mean_plddt_groups(stats_without, stats_chainA, tested_ids, comparison_i
         fontsize=8,
     )
 
+    ax.invert_yaxis()
     ax.set_xlabel("Mean pLDDT")
     ax.set_title(f"{model_name}: tested vs comparison")
 

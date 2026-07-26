@@ -468,7 +468,7 @@ if structure_prediction_analysis_bool:
                     max_residue_len=None,
                     model_name=f"{cfg['label']} ({ligand_state}, chain A)")
 
-                # comparison plddt landscape
+                # comparison plddt plots
                 if subset_without is not None and subset_chain is not None:
                     plot_plddt_landscape_groups(
                         stats_without=subset_without,
@@ -483,12 +483,8 @@ if structure_prediction_analysis_bool:
                         stats_chainA=subset_chain,
                         tested_ids=pure_tested_ids,
                         comparison_ids=pure_comparison_ids,
-                        save_path=(
-                                save_dir_plots /
-                                f"{model_name}_tested_vs_comparison_mean.png"
-                        ),
-                        model_name=cfg["label"],
-                    )
+                        save_path=(save_dir_plots / f"{model_name}_tested_vs_comparison_mean.png"),
+                        model_name=cfg["label"],)
 
     CONDITIONS = [
         ("without ligand", {
