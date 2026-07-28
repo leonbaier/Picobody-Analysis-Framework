@@ -573,18 +573,15 @@ def load_bli_dataset(folder: str | Path) -> dict:
     """
 
     folder = Path(folder)
-
     data = {}
 
     for pdf_file in folder.glob("*.pdf"):
-
         date_match = re.search(r"(\d{8})", pdf_file.stem,)
 
         if not date_match:
             continue
 
         pdf_date = date_match.group(1)
-
         date_key = (
             f"{pdf_date[:4]}-"
             f"{pdf_date[4:6]}-"
@@ -605,7 +602,15 @@ def load_bli_dataset(folder: str | Path) -> dict:
 
         mapping = {}
 
+        step_matches = re.findall(r"(\d+)\s+([A-Za-z ]+?)\s+(\d+)\s+Tube", text,)
         matches = re.findall(r"\b(\d+)\s+1\s+1\s+0\s+([A-Za-z0-9_.\-]+)", text,)
+        steps = [(step_name.strip(), int(duration),)
+            for _, step_name, duration
+            in step_matches]
+
+        data.setdefault(date_key, {})
+        data[date_key]["steps"] = steps
+        data[date_key].setdefault("runs", {})
 
         for run_id, sample_name in matches:
             mapping[int(run_id)] = sample_name
@@ -642,8 +647,7 @@ def load_bli_dataset(folder: str | Path) -> dict:
             df["Binding (nm)"] = pd.to_numeric(df["Binding (nm)"], errors="coerce",)
 
             df = df.dropna()
-            data[date_key][sample_name] = df
-
+            data[date_key]["runs"][sample_name] = df
     return data
 
 
@@ -655,23 +659,54 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], save_path=Non
             f"Date '{date}' not found."
         )
 
-    plt.figure(figsize=(10, 6))
-
+    fig, ax = plt.subplots(figsize=(10, 6))
 
     for run_name in run_names:
 
-        if run_name not in bli_data[date]:
+        if run_name not in bli_data[date]["runs"]:
             raise KeyError(f"Run '{run_name}' not found for date '{date}'.")
 
+        df = bli_data[date]["runs"][run_name]
 
-        df = bli_data[date][run_name]
-
-        plt.plot(
+        ax.plot(
             df["Time (s)"],
             df["Binding (nm)"],
             linewidth=2,
             label=run_name,
         )
+
+    steps = bli_data[date]["steps"]
+    cumulative_time = 0
+
+    for step_name, duration in steps:
+        ax.axvline(
+            cumulative_time,
+            color="red",
+            linestyle="--",
+            alpha=0.5,)
+        x_center = (
+                cumulative_time
+                + duration / 2
+        )
+
+        ax.text(
+            x_center,
+            0.02,
+            step_name,
+            transform=ax.get_xaxis_transform(),
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            color="darkred",
+            bbox=dict(
+                facecolor="white",
+                edgecolor="none",
+                alpha=0.8,
+                pad=1.5,
+            ),
+        )
+
+        cumulative_time += duration
 
     plt.xlabel("Time (s)")
     plt.ylabel("Binding (nm)")
