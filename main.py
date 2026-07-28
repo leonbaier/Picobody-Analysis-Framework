@@ -84,7 +84,8 @@ from MD_analysis import (
 from wet_lab_analysis import (
     load_akta_csv,
     plot_affinity_chromatography_run,
-    report_sec_fractions)
+    report_sec_fractions,
+    load_bli_dataset)
 
 
 # ---------------Switches-----------------------
@@ -96,7 +97,7 @@ cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
-MD_analysis_bool = True
+MD_analysis_bool = False
 wet_lab_analysis_bool = True
 
 # ---------------Configuration-----------------------
@@ -135,6 +136,7 @@ save_dir_af = Path(save_dir_structure_prediction / "af3")
 
 save_dir_wetlab_affinity = Path(save_dir_wetlab / "affinity_chromatography")
 save_dir_wetlab_sec = Path(save_dir_wetlab / "SEC_chromatography")
+save_dir_wetlab_bli = Path(save_dir_wetlab / "BLI")
 
 save_dir_variable_data.mkdir(exist_ok=True)
 save_dir_plots.mkdir(exist_ok=True)
@@ -677,6 +679,8 @@ if wet_lab_analysis_bool:
         fraction_filter=[("1.A.2", "1.A.5")],
         save_path=save_dir_plots / "V1_affinity_chromatography.png",
         title = "Affinity Chromatography mCloverV1")
+
+
     plot_affinity_chromatography_run(
         data=affinity_data_all,
         run_name=["20260713_AffinityCaptureSelectBovLC_mCloverV1_50mL", "20260722_AffinityCaptureSelectBovLC_mCloverV12_50ml",
@@ -710,6 +714,9 @@ if wet_lab_analysis_bool:
         config_file=save_dir_wetlab_sec / "sec_fraction_config.csv",
         save_path=save_dir_variable_data / "sec_fraction_report.csv",)
 
+    # plot BLI runs
+    bli_data = load_bli_dataset(save_dir_wetlab_bli)
+    print(bli_data)
 
 
 

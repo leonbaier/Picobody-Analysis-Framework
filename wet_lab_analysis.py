@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
+from pypdf import PdfReader
 
 def load_akta_csv(csv_path: str | Path) -> dict:
 
@@ -561,3 +562,94 @@ def report_sec_fractions(data: dict, config_file, fraction_signal: str = "Fracti
         )
 
     return results
+
+
+def load_bli_dataset(folder: str | Path) -> dict:
+    """
+    Load all BLI csv files and automatically map run numbers
+    to sample names using the corresponding BLItz PDF.
+
+    Returns
+    -------
+    {
+        "2026-07-27": {
+            "mCloverV1_alone_0.200": dataframe,
+            "mCloverV1_mClover_0.200": dataframe,
+            ...
+        }
+    }
+    """
+
+    folder = Path(folder)
+
+    data = {}
+
+    for pdf_file in folder.glob("*.pdf"):
+
+        date_match = re.search(r"(\d{8})", pdf_file.stem,)
+
+        if not date_match:
+            continue
+
+        pdf_date = date_match.group(1)
+
+        date_key = (
+            f"{pdf_date[:4]}-"
+            f"{pdf_date[4:6]}-"
+            f"{pdf_date[6:8]}"
+        )
+
+        # -----------------------------------------
+        # extract run mapping from pdf
+        # -----------------------------------------
+
+        text = ""
+        reader = PdfReader(pdf_file)
+
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += "\n" + page_text
+
+        mapping = {}
+
+        matches = re.findall(r"\b(\d+)\s+1\s+1\s+0\s+([A-Za-z0-9_.\-]+)", text,)
+
+        for run_id, sample_name in matches:
+            mapping[int(run_id)] = sample_name
+
+        if not mapping:
+            print(f"[BLI] No run mapping found in {pdf_file.name}")
+            continue
+
+        # -----------------------------------------
+        # load matching csv
+        # -----------------------------------------
+
+        data.setdefault(date_key, {})
+        csv_pattern = f"{date_key}_*.csv"
+
+        for csv_file in folder.glob(csv_pattern):
+
+            run_match = re.search(r"_(\d+)\.csv$", csv_file.name,)
+
+            if not run_match:
+                continue
+
+            run_id = int(run_match.group(1))
+            sample_name = mapping.get(run_id, f"run_{run_id}",)
+
+            df = pd.read_csv(
+                csv_file,
+                names=["Time (s)", "Binding (nm)", "Step"],
+                header=0,
+            )
+
+            df = df[["Time (s)", "Binding (nm)"]]
+            df["Time (s)"] = pd.to_numeric(df["Time (s)"], errors="coerce",)
+            df["Binding (nm)"] = pd.to_numeric(df["Binding (nm)"], errors="coerce",)
+
+            df = df.dropna()
+            data[date_key][sample_name] = df
+
+    return data
