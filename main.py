@@ -85,7 +85,8 @@ from wet_lab_analysis import (
     load_akta_csv,
     plot_affinity_chromatography_run,
     report_sec_fractions,
-    load_bli_dataset)
+    load_bli_dataset,
+    plot_bli_runs)
 
 
 # ---------------Switches-----------------------
@@ -725,6 +726,33 @@ if wet_lab_analysis_bool:
 
     # plot BLI runs
     bli_data = load_bli_dataset(save_dir_wetlab_bli)
+    print(bli_data)
+
+    for variant in ["V1", "V12", "V13",]:
+        plot_bli_runs(
+            bli_data=bli_data,
+            date="2026-07-27",
+            run_names=[
+                "mClover_PBS-Tween_0.025",
+                f"mClover{variant}_alone_0.200",
+                f"mClover{variant}_mClover_0.200",
+            ],
+            save_path=(save_dir_plots / f"BLI_{variant}.png"),
+            title=f"BLI {variant}",
+        )
+
+    plot_bli_runs(
+        bli_data=bli_data,
+        date="2026-07-28",
+        run_names=[
+            "mClover_controll",
+            "mCloverV13_alone",
+            "mCloverV13_mClover",
+        ],
+        save_path=save_dir_plots / "BLI_V13_0.05.png",
+        title="BLI mCloverV13 with 0.05 mg/ml",
+    )
+
 
 
 

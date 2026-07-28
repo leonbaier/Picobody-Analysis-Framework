@@ -645,3 +645,57 @@ def load_bli_dataset(folder: str | Path) -> dict:
             data[date_key][sample_name] = df
 
     return data
+
+
+def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], save_path=None, title: str | None = None,
+):
+
+    if date not in bli_data:
+        raise KeyError(
+            f"Date '{date}' not found."
+        )
+
+    plt.figure(figsize=(10, 6))
+
+
+    for run_name in run_names:
+
+        if run_name not in bli_data[date]:
+            raise KeyError(f"Run '{run_name}' not found for date '{date}'.")
+
+
+        df = bli_data[date][run_name]
+
+        plt.plot(
+            df["Time (s)"],
+            df["Binding (nm)"],
+            linewidth=2,
+            label=run_name,
+        )
+
+    plt.xlabel("Time (s)")
+    plt.ylabel("Binding (nm)")
+
+    if title is not None:
+        plt.title(title)
+    else:
+        plt.title(f"BLI ({date})")
+
+    plt.legend()
+    plt.grid(alpha=0.3)
+
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(
+            save_path,
+            dpi=300,
+        )
+        print(
+            f"Plot written to: "
+            f"{save_path}"
+        )
+    else:
+        plt.show()
+
+    plt.close()
