@@ -373,29 +373,14 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
             selected_x.append(x)
 
         if selected_x:
-            x_center = (
-                               min(selected_x)
-                               + max(selected_x)
-                       ) / 2
-
-            ax1.axvspan(
+            pool_patch = ax1.axvspan(
                 min(selected_x),
                 max(selected_x),
                 color="gold",
                 alpha=0.25,
-            )
+                label="Collected fractions",)
 
-            ax1.text(
-                x_center,
-                ymax * 0.95,
-                "Collected fractions",
-                ha="center",
-                va="top",
-                fontsize=10,
-                fontweight="bold",
-                color="darkred",
-            )
-
+    ax1.set_xlim(left=0)
     ax1.set_xlabel("Volume (ml)")
 
     if title is None:
@@ -403,8 +388,15 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
     else:
         ax1.set_title(title)
 
+    if selected_x:
+        handles.append(pool_patch)
+        labels.append("Collected fractions")
     if handles:
-        ax1.legend(handles, labels, loc="upper right")
+        ax1.legend(
+            handles,
+            labels,
+            loc="upper right",
+        )
 
     plt.tight_layout()
 
@@ -451,7 +443,7 @@ def report_sec_fractions(data: dict, config_file, fraction_signal: str = "Fracti
 
     for run_name, run_data in data.items():
 
-        if fraction_signal not in run_data:
+        if fraction_signal not in run_data and not fraction_signal == "sec_fraction_config":
             print(f"\n{run_name}: no fraction signal found")
             continue
 

@@ -672,19 +672,28 @@ if wet_lab_analysis_bool:
         affinity_data_all[run_name] = load_akta_csv(csv_file)
     print(f"Loaded {len(affinity_data_all)} chromatograms")
 
-    plot_affinity_chromatography_run(
-        data=affinity_data_all,
-        run_name="20260713_AffinityCaptureSelectBovLC_mCloverV1_50mL",
-        signals=["UV", "Conc B", "Fraction"],
-        fraction_filter=[("1.A.2", "1.A.5")],
-        save_path=save_dir_plots / "V1_affinity_chromatography.png",
-        title = "Affinity Chromatography mCloverV1")
+    fraction_filters = {
+        "20260713_AffinityCaptureSelectBovLC_mCloverV1_50mL": [("1.A.3", "1.A.5")],
+        "20260722_AffinityCaptureSelectBovLC_mCloverV12_50ml": [("1.B.10", "1.B.8")],
+        "20260722_AffinityCaptureSelectBovLC_mCloverV13_50ml": [("1.C.2", "1.C.6")],
+        "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml": [("1.D.11", "1.D.7")],
+    }
 
+    for variant, filter_ranges in fraction_filters.items():
+        match = re.search(r"(V\d+)", variant)
+        variant_short = match.group(1)
+        plot_affinity_chromatography_run(
+            data=affinity_data_all,
+            run_name=variant,
+            signals=["UV", "Conc B", "Fraction"],
+            fraction_filter=filter_ranges,
+            save_path=(save_dir_plots / f"{variant_short}_affinity_chromatography.png"),
+            title=f"Affinity Chromatography {variant_short}")
 
     plot_affinity_chromatography_run(
         data=affinity_data_all,
         run_name=["20260713_AffinityCaptureSelectBovLC_mCloverV1_50mL", "20260722_AffinityCaptureSelectBovLC_mCloverV12_50ml",
-                  "20260722_AffinityCaptureSelectBovLC_mCloverV13_2_50ml", "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml"],
+                  "20260722_AffinityCaptureSelectBovLC_mCloverV13_50ml", "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml"],
         run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14"],
         signals=["UV", "Conc B"],
         save_path=save_dir_plots / "affinity_chromatography_all.png",
@@ -707,7 +716,7 @@ if wet_lab_analysis_bool:
         run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14"],
         signals=["UV"],
         save_path=save_dir_plots / "sec_chromatography_all.png",
-        title="Size Exlcusion Chromatography mCloverV1/12/13/14")
+        title="Size Exclusion Chromatography mCloverV1/12/13/14")
 
     report_sec_fractions(
         data=sec_data_all,
@@ -716,7 +725,6 @@ if wet_lab_analysis_bool:
 
     # plot BLI runs
     bli_data = load_bli_dataset(save_dir_wetlab_bli)
-    print(bli_data)
 
 
 
