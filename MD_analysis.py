@@ -12,11 +12,9 @@ import numpy as np
 
 def run_md_analysis(topology_file: Path, trajectory_file: Path, output_dir: Path, analyses: list, run_name: str,
 ):
-
     u = load_aligned_universe(
         topology_file=topology_file,
         trajectory_file=trajectory_file,)
-
     output_dir.mkdir(parents=True, exist_ok=True,)
 
     for analysis in analyses:
@@ -46,7 +44,6 @@ def get_archived_md_runs(md_archive_root: Path,
             if not seq_dir.is_dir():
                 continue
             run_dirs.append(seq_dir)
-
     return sorted(run_dirs)
 
 
@@ -54,6 +51,12 @@ def get_md_analysis_runs(archive_root: Path, md_analyses: dict, force_reanalysis
 ) -> list[tuple[Path, Path, Path, list, str]]:
 
     runs = []
+    n_finished = 0
+    n_empty = 0
+    n_missing_topology = 0
+    n_missing_traj = 0
+    n_skipped = 0
+
     md_runs = get_archived_md_runs(archive_root)
 
     print(f"[MD Analysis] Found {len(md_runs)} archived runs.")
@@ -61,6 +64,7 @@ def get_md_analysis_runs(archive_root: Path, md_analyses: dict, force_reanalysis
     for run_dir in md_runs:
 
         analysis_dir = run_dir / "analysis"
+        trajectory_file = run_dir / "trajectory.dcd"
 
         analyses_current = list(md_analyses["default"]["analyses"])
         required_outputs_current = list(md_analyses["default"]["outputs"])
@@ -72,10 +76,7 @@ def get_md_analysis_runs(archive_root: Path, md_analyses: dict, force_reanalysis
         if force_reanalysis:
             if analysis_dir.exists():
                 shutil.rmtree(analysis_dir)
-
                 print(f"[MD Analysis] Removed existing analysis: {run_dir.name}")
-
-        analysis_dir.mkdir(parents=True, exist_ok=True,)
 
         if not force_reanalysis:
             already_done = all(
@@ -83,16 +84,54 @@ def get_md_analysis_runs(archive_root: Path, md_analyses: dict, force_reanalysis
                 for output_file in required_outputs_current)
 
             if already_done:
+                n_skipped += 1
                 print(f"[MD Analysis] Skip {run_dir.name}")
-
                 continue
 
+        topology_candidates = [
+            run_dir / "final.pdb",
+            run_dir / "initial.pdb",
+            run_dir / "input.pdb",
+            run_dir / "raw_input.pdb",]
+
+        topology_file = next(
+            (p for p in topology_candidates if p.exists()),
+            None,)
+
+        if topology_file is None:
+            n_missing_topology += 1
+            print(f"[MD Analysis] No topology found: {run_dir}")
+            continue
+        if not trajectory_file.exists():
+            print(f"[MD Analysis] No trajectory found: {run_dir}")
+            continue
+        if trajectory_file.stat().st_size == 0:
+            n_empty += 1
+            print(f"[MD Analysis] Empty trajectory: {run_dir}")
+            continue
+
+        try:
+            test_u = mda.Universe(topology_file, trajectory_file,)
+            len(test_u.trajectory)
+        except Exception as e:
+            print(f"[MD Analysis] Corrupt trajectory: {run_dir.name}")
+            print(e)
+            continue
+
+        analysis_dir.mkdir(parents=True, exist_ok=True,)
         runs.append((
                 analysis_dir,
-                run_dir / "final.pdb",
-                run_dir / "trajectory.dcd",
+                topology_file,
+                trajectory_file,
                 analyses_current,
                 run_dir.name,))
+
+    print("\n[MD Analysis Summary]")
+    print(f"Analysed: {n_finished}")
+    print(f"Already done: {n_skipped}")
+    print(f"Empty trajectories: {n_empty}")
+    print(f"Missing topology: {n_missing_topology}")
+    print(f"Missing trajectory: {n_missing_traj} \n")
 
     return runs
 
@@ -106,14 +145,128 @@ def load_aligned_universe(topology_file: Path, trajectory_file: Path,
     return u
 
 
+def create_rmsd_analysis(u: mda.Universe, output_dir: Path, run_name: str
+):
+
+    R = rms.RMSD(u, u, select="protein and name CA",)
+    R.run()
+
+    rmsd_df = pd.DataFrame({
+        "Frame": R.results.rmsd[:, 0],
+        "Time_ps": R.results.rmsd[:, 1],
+        "RMSD_Angstrom": R.results.rmsd[:, 2],})
+
+    rmsd_df.to_csv(output_dir / "rmsd.csv", index=False)
+
+    plt.figure(figsize=(8, 4))
+    plt.plot(rmsd_df["Time_ps"], rmsd_df["RMSD_Angstrom"],)
+    plt.xlim(0, max(rmsd_df["Time_ps"]))
+
+    plt.xlabel("Time (ps)")
+    plt.ylabel("RMSD (Å)")
+    plt.title(f"RMSD | {run_name.replace("_", " ")}")
+    plt.tight_layout()
+
+    plt.savefig(output_dir / "rmsd.png")
+    plt.close()
+
+
+def create_rmsf_analysis(u: mda.Universe, output_dir: Path, run_name: str
+):
+
+    protein = u.select_atoms("protein and name CA")
+
+    rmsf_calc = rms.RMSF(protein).run()
+    rmsf_df = pd.DataFrame({
+        "Residue": protein.resids,
+        "RMSF_Angstrom": rmsf_calc.results.rmsf,})
+
+    rmsf_df.to_csv(output_dir / "rmsf.csv", index=False,)
+
+    plt.figure(figsize=(8, 4))
+
+    resids = protein.resids
+    rmsf_values = rmsf_calc.results.rmsf
+
+    start_idx = 0
+
+    for i in range(1, len(resids)):
+        if resids[i] != resids[i - 1] + 1:
+            plt.plot(resids[start_idx:i], rmsf_values[start_idx:i],)
+
+            start_idx = i
+
+    plt.plot(resids[start_idx:], rmsf_values[start_idx:],)
+    plt.xlim(0, max(resids))
+
+    plt.xlabel("Residue")
+    plt.ylabel("RMSF (Å)")
+    plt.title(f"RMSF | {run_name.replace("_", " ")}")
+    plt.tight_layout()
+
+    plt.savefig(output_dir / "rmsf.png")
+    plt.close()
+
+
+def create_binder_target_distance_analysis(u: mda.Universe, output_dir: Path, run_name: str, binder_chain: str = "B",
+                                           target_chain: str = "A",
+):
+
+    """
+    Measures only differences between point of masses.
+    """
+
+    binder = u.select_atoms(f"segid {binder_chain}")
+    target = u.select_atoms(f"segid {target_chain}")
+
+    if len(binder) == 0 or len(target) == 0:
+        print("[Binding Analysis] Chains not found.")
+        return
+
+    times = []
+    distances = []
+
+    for ts in u.trajectory:
+        distance = np.linalg.norm(binder.center_of_mass() - target.center_of_mass())
+
+        times.append(ts.time)
+        distances.append(distance)
+
+    distance_df = pd.DataFrame({
+        "Time_ps": times,
+        "Distance_Angstrom": distances,})
+
+    distance_df.to_csv(output_dir / "binder_target_distance.csv", index=False,)
+
+    plt.figure(figsize=(8, 4))
+    plt.plot(distance_df["Time_ps"], distance_df["Distance_Angstrom"],)
+    plt.xlim(0, max(times))
+
+    plt.xlabel("Time (ps)")
+    plt.ylabel("Distance (Å)")
+    plt.title(f"Binder-Target Distance | {run_name.replace("_", " ")}")
+    plt.tight_layout()
+
+    plt.savefig(output_dir / "binder_target_distance.png")
+    plt.close()
+
+
 def create_conditions_file(run_dir: Path, output_dir: Path, run_name: str,
 ):
 
     slurm_file = run_dir / "run_md.slurm"
     python_file = run_dir / "run_md.py"
     log_file = run_dir / "log.txt"
-    topology_file = run_dir / "final.pdb"
     trajectory_file = run_dir / "trajectory.dcd"
+
+    topology_candidates = [
+        run_dir / "final.pdb",
+        run_dir / "initial.pdb",
+        run_dir / "input.pdb",
+        run_dir / "raw_input.pdb",]
+    topology_file = next(
+        (p for p in topology_candidates if p.exists()),
+        None,)
 
     slurm_text = slurm_file.read_text(encoding="utf-8")
     python_text = python_file.read_text(encoding="utf-8")
@@ -206,6 +359,13 @@ def create_conditions_file(run_dir: Path, output_dir: Path, run_name: str,
 
     if (run_dir / "final.pdb").exists():
         run_status = "COMPLETED"
+    elif trajectory_file.exists():
+        try:
+            u = mda.Universe(topology_file, trajectory_file)
+            len(u.trajectory)
+            run_status = "PARTIAL"
+        except Exception:
+            run_status = "CORRUPT"
     elif log_file.exists():
         log_text_lower = log_text.lower()
         if (
@@ -350,105 +510,3 @@ Maximum temperature (K): {max_temperature}
 """
 
     (output_dir / "conditions.txt").write_text(conditions, encoding="utf-8",)
-
-
-def create_rmsd_analysis(u: mda.Universe, output_dir: Path, run_name: str
-):
-
-    R = rms.RMSD(u, u, select="protein and name CA",)
-    R.run()
-
-    rmsd_df = pd.DataFrame({
-        "Frame": R.results.rmsd[:, 0],
-        "Time_ps": R.results.rmsd[:, 1],
-        "RMSD_Angstrom": R.results.rmsd[:, 2],})
-
-    rmsd_df.to_csv(output_dir / "rmsd.csv", index=False)
-
-    plt.figure(figsize=(8, 4))
-    plt.plot(rmsd_df["Time_ps"], rmsd_df["RMSD_Angstrom"],)
-    plt.xlim(0, max(rmsd_df["Time_ps"]))
-
-    plt.xlabel("Time (ps)")
-    plt.ylabel("RMSD (Å)")
-    plt.title(f"RMSD | {run_name.replace("_", " ")}")
-    plt.tight_layout()
-
-    plt.savefig(output_dir / "rmsd.png")
-    plt.close()
-
-
-def create_rmsf_analysis(u: mda.Universe, output_dir: Path, run_name: str
-):
-
-    protein = u.select_atoms("protein and name CA")
-
-    rmsf_calc = rms.RMSF(protein).run()
-    rmsf_df = pd.DataFrame({
-        "Residue": protein.resids,
-        "RMSF_Angstrom": rmsf_calc.results.rmsf,})
-
-    rmsf_df.to_csv(output_dir / "rmsf.csv", index=False,)
-
-    plt.figure(figsize=(8, 4))
-
-    resids = protein.resids
-    rmsf_values = rmsf_calc.results.rmsf
-
-    start_idx = 0
-
-    for i in range(1, len(resids)):
-        if resids[i] != resids[i - 1] + 1:
-            plt.plot(resids[start_idx:i], rmsf_values[start_idx:i],)
-
-            start_idx = i
-
-    plt.plot(resids[start_idx:], rmsf_values[start_idx:],)
-    plt.xlim(0, max(resids))
-
-    plt.xlabel("Residue")
-    plt.ylabel("RMSF (Å)")
-    plt.title(f"RMSF | {run_name.replace("_", " ")}")
-    plt.tight_layout()
-
-    plt.savefig(output_dir / "rmsf.png")
-    plt.close()
-
-
-def create_binder_target_distance_analysis(u: mda.Universe, output_dir: Path, run_name: str, binder_chain: str = "B",
-                                           target_chain: str = "A",
-):
-
-    binder = u.select_atoms(f"segid {binder_chain}")
-    target = u.select_atoms(f"segid {target_chain}")
-
-    if len(binder) == 0 or len(target) == 0:
-        print("[Binding Analysis] Chains not found.")
-        return
-
-    times = []
-    distances = []
-
-    for ts in u.trajectory:
-        distance = np.linalg.norm(binder.center_of_mass() - target.center_of_mass())
-
-        times.append(ts.time)
-        distances.append(distance)
-
-    distance_df = pd.DataFrame({
-        "Time_ps": times,
-        "Distance_Angstrom": distances,})
-
-    distance_df.to_csv(output_dir / "binder_target_distance.csv", index=False,)
-
-    plt.figure(figsize=(8, 4))
-    plt.plot(distance_df["Time_ps"], distance_df["Distance_Angstrom"],)
-    plt.xlim(0, max(times))
-
-    plt.xlabel("Time (ps)")
-    plt.ylabel("Distance (Å)")
-    plt.title(f"Binder-Target Distance | {run_name.replace("_", " ")}")
-    plt.tight_layout()
-
-    plt.savefig(output_dir / "binder_target_distance.png")
-    plt.close()

@@ -98,8 +98,8 @@ cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
-MD_analysis_bool = False
-wet_lab_analysis_bool = True
+MD_analysis_bool = True
+wet_lab_analysis_bool = False
 
 # ---------------Configuration-----------------------
 # choose sequences for structure prediction plddt comparison plots
@@ -110,7 +110,7 @@ comparison_variant_v = ["v5" ,"v8", "v9", "v11",]
 comparison_variant_seq = []
 
 # choose for which of the sequences above MDs are prepared (choose from "comparison", "tested", "both")
-md_selection_mode = "tested"
+md_selection_mode = "comparison"
 
 
 # ---------------Paths--------------------------
@@ -645,8 +645,7 @@ if MD_analysis_bool:
         create_conditions_file(
             run_dir=topology_file.parent,
             output_dir=analysis_dir,
-            run_name=run_name,
-        )
+            run_name=run_name,)
 
         run_md_analysis(
             topology_file=topology_file,
@@ -656,7 +655,6 @@ if MD_analysis_bool:
             run_name=run_name)
 
         print(f"[MD Analysis] Finished {run_name}")
-
 
 
 
