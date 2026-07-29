@@ -5,8 +5,7 @@ import re
 import MDAnalysis as mda
 import matplotlib.pyplot as plt
 import pandas as pd
-from MDAnalysis.analysis import rms
-from MDAnalysis.analysis import align
+from MDAnalysis.analysis import rms, align, distances
 import numpy as np
 
 
@@ -248,6 +247,47 @@ def create_binder_target_distance_analysis(u: mda.Universe, output_dir: Path, ru
     plt.tight_layout()
 
     plt.savefig(output_dir / "binder_target_distance.png")
+    plt.close()
+
+
+def create_minimum_contact_distance_analysis(u: mda.Universe, output_dir: Path, run_name: str, binder_chain: str = "B",
+        target_chain: str = "A",
+):
+
+    binder = u.select_atoms(f"segid {binder_chain}")
+    target = u.select_atoms(f"segid {target_chain}")
+
+    if len(binder) == 0 or len(target) == 0:
+        print("[Minimum Distance] Chains not found.")
+        return
+
+    times = []
+    min_distances = []
+
+    for ts in u.trajectory:
+        distance_matrix = distances.distance_array(binder.positions, target.positions,)
+        min_distance = np.min(distance_matrix)
+
+        times.append(ts.time)
+        min_distances.append(min_distance)
+
+    distance_df = pd.DataFrame({
+        "Time_ps": times,
+        "Min_Distance_Angstrom": min_distances,})
+
+    distance_df.to_csv(output_dir / "minimum_contact_distance.csv", index=False,)
+
+    plt.figure(figsize=(8, 4))
+    plt.plot(distance_df["Time_ps"], distance_df["Min_Distance_Angstrom"],)
+
+    plt.xlim(0, max(times),)
+    plt.xlabel("Time (ps)")
+    plt.ylabel("Minimum atom distance (Å)")
+    plt.title(f"Minimum Contact Distance | {run_name.replace('_', ' ')}")
+    plt.tight_layout()
+
+    plt.savefig(output_dir / "minimum_contact_distance.png")
+
     plt.close()
 
 

@@ -80,7 +80,8 @@ from MD_analysis import (
     run_md_analysis,
     create_rmsd_analysis,
     create_rmsf_analysis,
-    create_binder_target_distance_analysis,)
+    create_binder_target_distance_analysis,
+    create_minimum_contact_distance_analysis)
 from wet_lab_analysis import (
     load_akta_csv,
     plot_affinity_chromatography_run,
@@ -619,12 +620,24 @@ if MD_analysis_bool:
         "with_ligand": {
             "outputs": [
                 "binder_target_distance.csv",
-                "binder_target_distance.png",],
+                "binder_target_distance.png",
+                "minimum_contact_distance.csv",
+                "minimum_contact_distance.png",
+            ],
             "analyses": [
                 partial(
                     create_binder_target_distance_analysis,
                     binder_chain="B",
-                    target_chain="A")]}}
+                    target_chain="A",
+                ),
+                partial(
+                    create_minimum_contact_distance_analysis,
+                    binder_chain="B",
+                    target_chain="A",
+                ),
+            ]
+        }
+    }
 
     # turn off warnings after double check
     warnings.filterwarnings(
