@@ -13,51 +13,38 @@ def load_akta_csv(csv_path: str | Path) -> dict:
         "utf-8",
         "utf-8-sig",
         "cp1252",
-        "latin1",
-    ]
+        "latin1",]
 
     last_error = None
 
     for encoding in encodings:
-
         try:
-
             df = pd.read_csv(
                 csv_path,
                 sep="\t",
                 header=None,
                 dtype=str,
                 engine="python",
-                encoding=encoding,
-            )
-
-            print(
-                f"Loaded '{csv_path.name}' "
-                f"using encoding '{encoding}'"
-            )
-
+                encoding=encoding,)
+            print(f"Loaded '{csv_path.name}' using encoding {encoding}")
             break
 
         except UnicodeError as e:
             last_error = e
-
     else:
         raise last_error
 
     signal_names = df.iloc[1]
     units = df.iloc[2]
-
     result = {}
 
     for col in range(0, len(df.columns) - 1, 2): # iteration in pairs (ml vs. X)
-
         signal_name = signal_names.iloc[col]
 
         if pd.isna(signal_name):
             continue
 
         signal_name = str(signal_name).strip()
-
         base_name = signal_name
         counter = 1
 
@@ -79,7 +66,6 @@ def load_akta_csv(csv_path: str | Path) -> dict:
         # ---- categorical signal (Fraction, Event, Injection, ...) ----
         # in case of this condition, assume categorical
         if y_numeric.notna().sum() == 0:
-
             data = data.dropna(subset=["x"])
 
             if data.empty:
@@ -90,9 +76,7 @@ def load_akta_csv(csv_path: str | Path) -> dict:
                 "x_label": x_label,
                 "y_label": y_label,
                 "x": data["x"].to_numpy(),
-                "labels": data["y"].astype(str).to_numpy(),
-            }
-
+                "labels": data["y"].astype(str).to_numpy(),}
             continue
 
         # ---- numeric signal ----
@@ -107,8 +91,7 @@ def load_akta_csv(csv_path: str | Path) -> dict:
             "x_label": x_label,
             "y_label": y_label,
             "x": data["x"].to_numpy(),
-            "y": data["y"].to_numpy(),
-        }
+            "y": data["y"].to_numpy(),}
 
     return result
 
@@ -161,25 +144,20 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         fig, ax = plt.subplots(figsize=(12, 6))
         common_max_x = min(
             np.max(data[run][signals[0]]["x"])
-            for run in run_name
-        )
+            for run in run_name)
 
         run_colors = plt.cm.tab10.colors
-
         signal_styles = {
             "UV": "-",
             "Conductivity": "--",
-            "Conc B": ":",
-        }
+            "Conc B": ":",}
 
         multiple_runs = len(run_name) > 1
         multiple_signals = len(signals) > 1
 
         if run_display_names is not None:
             if len(run_display_names) != len(run_name):
-                raise ValueError(
-                    "run_display_names must have same length as run_name."
-                )
+                raise ValueError("run_display_names must have same length as run_name.")
 
         for i, run in enumerate(run_name):
 
@@ -187,19 +165,14 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                 raise KeyError(f"Run '{run}' not found.")
 
             run_data = data[run]
-
             display_run = (
                 run_display_names[i]
                 if run_display_names is not None
-                else run
-            )
+                else run)
 
             for signal in signals:
-
                 if signal not in run_data:
-                    raise KeyError(
-                        f"Signal '{signal}' not found in run '{run}'."
-                    )
+                    raise KeyError(f"Signal '{signal}' not found in run '{run}'.")
 
                 signal_data = run_data[signal]
 
@@ -222,8 +195,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                     label=label,
                     color=run_colors[i % len(run_colors)],
                     linestyle=linestyle,
-                    linewidth=2.5,
-                )
+                    linewidth=2.5,)
 
         first_run = run_name[0]
         first_signal = signals[0]
@@ -233,8 +205,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
 
         ax.set_ylabel(
             f"{first_signal} "
-            f"({data[first_run][first_signal]['y_label']})"
-        )
+            f"({data[first_run][first_signal]['y_label']})")
 
         ax.grid(alpha=0.3)
 
@@ -244,7 +215,6 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
             ax.set_title(title)
 
         ax.legend()
-
         plt.tight_layout()
 
         if save_path is not None:
@@ -261,11 +231,9 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         raise KeyError(f"Run '{run_name}' not found.")
 
     run_data = data[run_name]
-
     invalid_signals = [
         signal for signal in signals
-        if signal not in run_data
-    ]
+        if signal not in run_data]
 
     if invalid_signals:
         available = sorted(run_data.keys())
@@ -273,21 +241,17 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         raise ValueError(
             f"Signal(s) not found: {invalid_signals}\n"
             f"Available signals for '{run_name}':\n"
-            f"{available}"
-        )
+            f"{available}")
 
     numeric_signals = [
         s for s in signals
-        if run_data[s].get("type", "numeric") == "numeric"
-    ]
+        if run_data[s].get("type", "numeric") == "numeric"]
 
     categorical_signals = [
         s for s in signals
-        if run_data[s].get("type") == "categorical"
-    ]
+        if run_data[s].get("type") == "categorical"]
 
     fig, ax1 = plt.subplots(figsize=(12, 6))
-
     axes = [ax1]
 
     if len(numeric_signals) >= 2:
@@ -305,8 +269,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         "tab:green",
         "tab:orange",
         "tab:purple",
-        "tab:brown",
-    ]
+        "tab:brown",]
 
     handles = []
     labels = []
@@ -316,13 +279,11 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         signal_data = run_data[signal]
 
         ax = axes[min(i, len(axes) - 1)]
-
         signal_lower = signal.lower()
 
         is_uvvis = any(
             token in signal_lower
-            for token in ["uv", "uv_vis", "uvvis"]
-        )
+            for token in ["uv", "uv_vis", "uvvis"])
 
         color = colors[i % len(colors)]
 
@@ -336,40 +297,27 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
             label=signal,
         )[0]
 
-        ax.set_ylabel(
-            f"{signal} ({signal_data['y_label']})",
-            color=color,
-        )
-
-        ax.tick_params(
-            axis="y",
-            labelcolor=color,
-        )
+        ax.set_ylabel(f"{signal} ({signal_data['y_label']})", color=color,)
+        ax.tick_params(axis="y", labelcolor=color,)
 
         handles.append(line)
         labels.append(signal)
 
     # ---------- categorical signals ----------
-    ymax = ax1.get_ylim()[1]
-
     def fraction_in_ranges(fraction_label: str, ranges: list[tuple[str, str]],
     ) -> bool:
-
         for start, end in ranges:
             if start <= fraction_label <= end:
                 return True
-
         return False
 
     for signal in categorical_signals:
         signal_data = run_data[signal]
-
         selected_x = []
 
         for x, label in zip(signal_data["x"], signal_data["labels"]):
             if fraction_filter is not None and not fraction_in_ranges(str(label), fraction_filter):
                 continue
-
             selected_x.append(x)
 
         if selected_x:
@@ -392,12 +340,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         handles.append(pool_patch)
         labels.append("Collected fractions")
     if handles:
-        ax1.legend(
-            handles,
-            labels,
-            loc="upper right",
-        )
-
+        ax1.legend(handles, labels, loc="upper right",)
     plt.tight_layout()
 
     if save_path is not None:
@@ -410,7 +353,6 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
 
 
 def load_sec_fraction_config(config_file):
-
     df = pd.read_csv(config_file, sep=";")
 
     selected_fractions = {}
@@ -421,14 +363,8 @@ def load_sec_fraction_config(config_file):
         run = row["run"]
         fraction = row["fraction"]
         concentration = row["concentration_mg_ml"]
-
-        selected_fractions.setdefault(run, []).append(
-            fraction
-        )
-
-        concentrations.setdefault(run, {})[
-            fraction
-        ] = concentration
+        selected_fractions.setdefault(run, []).append(fraction)
+        concentrations.setdefault(run, {})[fraction] = concentration
 
     return selected_fractions, concentrations
 
@@ -438,7 +374,6 @@ def report_sec_fractions(data: dict, config_file, fraction_signal: str = "Fracti
 
     results = {}
     export_rows = []
-
     selected_fractions, concentrations = load_sec_fraction_config(config_file)
 
     for run_name, run_data in data.items():
@@ -448,21 +383,18 @@ def report_sec_fractions(data: dict, config_file, fraction_signal: str = "Fracti
             continue
 
         frac_data = run_data[fraction_signal]
-
         x = frac_data["x"]
         labels = frac_data["labels"]
 
         run_fractions = (
             selected_fractions.get(run_name)
             if selected_fractions is not None
-            else None
-        )
+            else None)
 
         run_concentrations = (
             concentrations.get(run_name, {})
             if concentrations is not None
-            else {}
-        )
+            else {})
 
         print("\n" + "=" * 100)
         print(run_name)
@@ -472,7 +404,6 @@ def report_sec_fractions(data: dict, config_file, fraction_signal: str = "Fracti
         run_results = {}
 
         for i in range(len(labels) - 1):
-
             current_fraction = str(labels[i]).strip()
 
             if current_fraction.lower() == "waste":
@@ -480,8 +411,7 @@ def report_sec_fractions(data: dict, config_file, fraction_signal: str = "Fracti
 
             if (
                 run_fractions is not None
-                and current_fraction not in run_fractions
-            ):
+                and current_fraction not in run_fractions):
                 continue
 
             volume_ml = float(x[i + 1] - x[i])
@@ -489,34 +419,24 @@ def report_sec_fractions(data: dict, config_file, fraction_signal: str = "Fracti
             row = {
                 "run": run_name,
                 "fraction": current_fraction,
-                "volume_ml": volume_ml,
-            }
+                "volume_ml": volume_ml,}
 
             line = (
                 f"{current_fraction:>10s} | "
-                f"{volume_ml:6.2f} ml"
-            )
+                f"{volume_ml:6.2f} ml")
 
             if current_fraction in run_concentrations:
 
-                conc = float(
-                    run_concentrations[current_fraction]
-                )
+                conc = float(run_concentrations[current_fraction])
 
                 protein_mg = conc * volume_ml
-
                 total_protein_mg += protein_mg
 
                 row["concentration_mg_ml"] = conc
                 row["protein_mg"] = protein_mg
-
-                line += (
-                    f" | {conc:6.3f} mg/ml"
-                    f" | {protein_mg:6.3f} mg"
-                )
+                line += f" | {conc:6.3f} mg/ml | {protein_mg:6.3f} mg"
 
             else:
-
                 row["concentration_mg_ml"] = np.nan
                 row["protein_mg"] = np.nan
 
@@ -528,30 +448,19 @@ def report_sec_fractions(data: dict, config_file, fraction_signal: str = "Fracti
         print("-" * 100)
         print(
             f"Total protein amount: "
-            f"{total_protein_mg:.3f} mg"
-        )
+            f"{total_protein_mg:.3f} mg")
 
         export_rows.append({
             "run": run_name,
             "fraction": "TOTAL",
             "volume_ml": np.nan,
             "concentration_mg_ml": np.nan,
-            "protein_mg": total_protein_mg,
-        })
-
+            "protein_mg": total_protein_mg,})
         results[run_name] = run_results
 
     if save_path is not None:
-
-        pd.DataFrame(export_rows).to_csv(
-            save_path,
-            sep=";",
-            index=False
-        )
-
-        print(
-            f"\nFraction report written to:\n{save_path}"
-        )
+        pd.DataFrame(export_rows).to_csv(save_path, sep=";", index=False)
+        print(f"\nFraction report written to:\n{save_path}")
 
     return results
 
@@ -585,8 +494,7 @@ def load_bli_dataset(folder: str | Path) -> dict:
         date_key = (
             f"{pdf_date[:4]}-"
             f"{pdf_date[4:6]}-"
-            f"{pdf_date[6:8]}"
-        )
+            f"{pdf_date[6:8]}")
 
         # -----------------------------------------
         # extract run mapping from pdf
@@ -627,7 +535,6 @@ def load_bli_dataset(folder: str | Path) -> dict:
         csv_pattern = f"{date_key}_*.csv"
 
         for csv_file in folder.glob(csv_pattern):
-
             run_match = re.search(r"_(\d+)\.csv$", csv_file.name,)
 
             if not run_match:
@@ -636,12 +543,7 @@ def load_bli_dataset(folder: str | Path) -> dict:
             run_id = int(run_match.group(1))
             sample_name = mapping.get(run_id, f"run_{run_id}",)
 
-            df = pd.read_csv(
-                csv_file,
-                names=["Time (s)", "Binding (nm)", "Step"],
-                header=0,
-            )
-
+            df = pd.read_csv(csv_file, names=["Time (s)", "Binding (nm)", "Step"], header=0,)
             df = df[["Time (s)", "Binding (nm)"]]
             df["Time (s)"] = pd.to_numeric(df["Time (s)"], errors="coerce",)
             df["Binding (nm)"] = pd.to_numeric(df["Binding (nm)"], errors="coerce",)
@@ -655,25 +557,20 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], save_path=Non
 ):
 
     if date not in bli_data:
-        raise KeyError(
-            f"Date '{date}' not found."
-        )
+        raise KeyError(f"Date '{date}' not found.")
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for run_name in run_names:
-
         if run_name not in bli_data[date]["runs"]:
             raise KeyError(f"Run '{run_name}' not found for date '{date}'.")
 
         df = bli_data[date]["runs"][run_name]
-
         ax.plot(
             df["Time (s)"],
             df["Binding (nm)"],
             linewidth=2,
-            label=run_name,
-        )
+            label=run_name,)
 
     steps = bli_data[date]["steps"]
     cumulative_time = 0
@@ -684,10 +581,7 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], save_path=Non
             color="red",
             linestyle="--",
             alpha=0.5,)
-        x_center = (
-                cumulative_time
-                + duration / 2
-        )
+        x_center = (cumulative_time + duration / 2)
 
         ax.text(
             x_center,
@@ -725,15 +619,72 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], save_path=Non
     plt.tight_layout()
 
     if save_path is not None:
-        plt.savefig(
-            save_path,
-            dpi=300,
-        )
-        print(
-            f"Plot written to: "
-            f"{save_path}"
-        )
+        plt.savefig(save_path, dpi=300,)
+        print(f"Plot written to: {save_path}")
     else:
         plt.show()
 
     plt.close()
+
+
+def load_supr_dsf_export(csv_file: str | Path,
+) -> dict[str, pd.DataFrame]:
+
+    csv_file = Path(csv_file)
+
+    with open(csv_file, "r", encoding="utf-8", errors="ignore",) as f:
+        rows = [line.rstrip("\n").split(",") for line in f]
+
+    max_cols = max(len(row) for row in rows)
+    rows = [row + [""] * (max_cols - len(row)) for row in rows]
+
+    raw = pd.DataFrame(rows)
+
+    sample_info = raw.iloc[0]
+    column_info = raw.iloc[1]
+
+    data = {}
+    col = 0
+
+    while col + 5 < raw.shape[1]:
+
+        well = sample_info.iloc[col]
+
+        if not well:
+            col += 1
+            continue
+
+        sample_name = sample_info.iloc[col + 1]
+        cols = list(column_info.iloc[col:col + 6])
+
+        block = raw.iloc[2:, col:col + 6,].copy()
+        block.columns = cols
+        block = block.apply(pd.to_numeric, errors="coerce",)
+        block = block.dropna(subset=[cols[0]])
+
+        data[f"{well}_{sample_name}"] = block
+        col += 8
+
+    return data
+
+
+def load_all_supr_dsf_exports(save_dir: str | Path,
+) -> dict:
+
+    save_dir = Path(save_dir)
+    all_data = {}
+
+    for export_dir in save_dir.iterdir():
+
+        if not export_dir.is_dir():
+            continue
+
+        thermal_file = (export_dir / "ThermalRamp_All.csv")
+
+        if not thermal_file.exists():
+            continue
+
+        print(f"Loading {export_dir.name}")
+        all_data[export_dir.name] = (load_supr_dsf_export( thermal_file))
+
+    return all_data

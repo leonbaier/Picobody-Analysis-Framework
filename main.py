@@ -87,7 +87,8 @@ from wet_lab_analysis import (
     plot_affinity_chromatography_run,
     report_sec_fractions,
     load_bli_dataset,
-    plot_bli_runs)
+    plot_bli_runs,
+    load_all_supr_dsf_exports)
 
 
 # ---------------Switches-----------------------
@@ -139,6 +140,8 @@ save_dir_af = Path(save_dir_structure_prediction / "af3")
 save_dir_wetlab_affinity = Path(save_dir_wetlab / "affinity_chromatography")
 save_dir_wetlab_sec = Path(save_dir_wetlab / "SEC_chromatography")
 save_dir_wetlab_bli = Path(save_dir_wetlab / "BLI")
+save_dir_wetlab_supr_dsf = Path(save_dir_wetlab / "SUPR-DSF")
+
 
 save_dir_variable_data.mkdir(exist_ok=True)
 save_dir_plots.mkdir(exist_ok=True)
@@ -688,8 +691,7 @@ if wet_lab_analysis_bool:
         "20260713_AffinityCaptureSelectBovLC_mCloverV1_50mL": [("1.A.3", "1.A.5")],
         "20260722_AffinityCaptureSelectBovLC_mCloverV12_50ml": [("1.B.10", "1.B.8")],
         "20260722_AffinityCaptureSelectBovLC_mCloverV13_50ml": [("1.C.2", "1.C.6")],
-        "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml": [("1.D.11", "1.D.7")],
-    }
+        "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml": [("1.D.11", "1.D.7")],}
 
     for variant, filter_ranges in fraction_filters.items():
         match = re.search(r"(V\d+)", variant)
@@ -710,6 +712,7 @@ if wet_lab_analysis_bool:
         signals=["UV", "Conc B"],
         save_path=save_dir_plots / "affinity_chromatography_all.png",
         title="Affinity Chromatography mCloverV1/12/13/14")
+
 
     # plot sec chromatography results
     sec_data_all = {}
@@ -734,6 +737,7 @@ if wet_lab_analysis_bool:
         data=sec_data_all,
         config_file=save_dir_wetlab_sec / "sec_fraction_config.csv",
         save_path=save_dir_variable_data / "sec_fraction_report.csv",)
+
 
     # plot BLI runs
     bli_data = load_bli_dataset(save_dir_wetlab_bli)
@@ -773,6 +777,10 @@ if wet_lab_analysis_bool:
             run_names=cfg["run_names"],
             save_path=save_dir_plots / cfg["save_name"],
             title=cfg["title"],)
+
+
+    # plot SUPR-DSF runs
+    supr_dsf_data = load_all_supr_dsf_exports(save_dir_wetlab_supr_dsf)
 
 
 
