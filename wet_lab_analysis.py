@@ -711,6 +711,9 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], save_path=Non
     plt.xlabel("Time (s)")
     plt.ylabel("Binding (nm)")
 
+    plt.xlim(0, cumulative_time)
+    plt.ylim(-0.1, 1.0)
+
     if title is not None:
         plt.title(title)
     else:

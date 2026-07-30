@@ -99,8 +99,8 @@ cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
-MD_analysis_bool = True
-wet_lab_analysis_bool = False
+MD_analysis_bool = False
+wet_lab_analysis_bool = True
 
 # ---------------Configuration-----------------------
 # choose sequences for structure prediction plddt comparison plots
@@ -745,23 +745,34 @@ if wet_lab_analysis_bool:
             run_names=[
                 "mClover_PBS-Tween_0.025",
                 f"mClover{variant}_alone_0.200",
-                f"mClover{variant}_mClover_0.200",
-            ],
+                f"mClover{variant}_mClover_0.200",],
             save_path=(save_dir_plots / f"BLI_{variant}.png"),
-            title=f"BLI mClover{variant}",
-        )
+            title=f"BLI mClover{variant}",)
 
-    plot_bli_runs(
-        bli_data=bli_data,
-        date="2026-07-28",
-        run_names=[
-            "mClover_controll",
-            "mCloverV13_alone",
-            "mCloverV13_mClover",
-        ],
-        save_path=save_dir_plots / "BLI_V13_0.05.png",
-        title="BLI mCloverV13 with 0.05 mg/ml",
-    )
+    special_case_bli = [{
+            "date": "2026-07-28",
+            "run_names": [
+                "mClover_controll",
+                "mCloverV13_alone",
+                "mCloverV13_mClover",],
+            "save_name": "BLI_V13_2_0.05.png",
+            "title": "BLI mCloverV13 with 0.05 mg/ml",},
+        {
+            "date": "2026-07-30",
+            "run_names": [
+                "mClover_PBS-Tween_0.025",
+                "mCloverV13_alone_0.200",
+                "mCloverV13_mClover_0.200",],
+            "save_name": "BLI_V13_3.png",
+            "title": "BLI mCloverV13",},]
+
+    for cfg in special_case_bli:
+        plot_bli_runs(
+            bli_data=bli_data,
+            date=cfg["date"],
+            run_names=cfg["run_names"],
+            save_path=save_dir_plots / cfg["save_name"],
+            title=cfg["title"],)
 
 
 

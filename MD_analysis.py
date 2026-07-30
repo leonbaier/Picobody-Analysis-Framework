@@ -124,6 +124,7 @@ def get_md_analysis_runs(archive_root: Path, md_analyses: dict, force_reanalysis
                 trajectory_file,
                 analyses_current,
                 run_dir.name,))
+        n_finished += 1
 
     print("\n[MD Analysis Summary]")
     print(f"Analysed: {n_finished}")
