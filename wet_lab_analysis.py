@@ -5,8 +5,9 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 from pypdf import PdfReader
-from scipy.signal import savgol_filter
+from scipy.signal import find_peaks
 from scipy.stats import linregress
+from scipy.optimize import curve_fit
 
 
 def load_akta_csv(csv_path: str | Path) -> dict:
@@ -693,21 +694,35 @@ def load_all_supr_dsf_exports(save_dir: str | Path,
     return all_data
 
 
+# fit functions
+def gaussian(x, amplitude, center, sigma,):
+    return amplitude* np.exp(-((x - center) ** 2) / (2 * sigma ** 2))
+
+def one_peak_model(x, offset, slope, a1, c1, s1,):
+    return offset + slope * x + gaussian(x, a1, c1, s1,)
+
+def two_peak_model(x, offset, slope, a1, c1, s1, a2, c2, s2,):
+    return offset + slope * x + gaussian(x, a1, c1, s1,) + gaussian(x, a2, c2, s2,)
+
+
 def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str, smooth: bool = True,
-                  show_tm: bool = False, show_tonset: bool = False, show_values: bool = False, save_path=None,
-                  title: str | None = None,
+        show_tm: bool = False, show_tonset: bool = False, show_values: bool = False, save_path=None, title: str | None = None,
 ):
 
     if experiment not in supr_dsf_data:
         raise KeyError(f"Experiment '{experiment}' not found.")
 
     experiment_data = supr_dsf_data[experiment]
-    sample_keys = [key for key in experiment_data if key.endswith(f"_{sample}")]
+
+    sample_keys = [key
+        for key in experiment_data
+        if key.endswith(f"_{sample}")]
 
     if not sample_keys:
         raise KeyError(f"No samples found for '{sample}'.")
 
     plt.figure(figsize=(8, 5))
+
     colors = [
         "tab:blue",
         "tab:orange",
@@ -722,86 +737,143 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
             color=colors[i % len(colors)],
             label=f"Replicate {i + 1}",)
 
-    if smooth:
+    tm1 = None
+    tm2 = None
+    tonset = None
+
+    if smooth and signal == "dBcm":
+
         reference_df = experiment_data[sample_keys[0]]
-        temperature = (reference_df["Temperature"].to_numpy())
+        x = reference_df["Temperature"].to_numpy()
         y_stack = np.vstack([
             experiment_data[key][signal].to_numpy()
             for key in sample_keys])
 
-        mean_y = np.mean(y_stack, axis=0,)
+        y = np.mean(y_stack, axis=0,)
+        peak_indices, _ = find_peaks( y, prominence=np.std(y) * 0.5,)
+        peak_indices = peak_indices[np.argsort(y[peak_indices])[::-1]]
 
-        smooth_y = savgol_filter(
-            mean_y,
-            window_length=11,
-            polyorder=3,)
+        n_transitions = min(len(peak_indices), 2,)
+
+        if n_transitions == 0:
+            peak = np.argmax(y)
+            p0 = [
+                np.min(y),
+                0,
+                y[peak],
+                x[peak],
+                2,
+            ]
+
+            params, _ = curve_fit( one_peak_model, x, y, p0=p0, maxfev=10000,)
+            fit_y = one_peak_model(x, *params,)
+            tm1 = params[3]
+
+        elif n_transitions == 1:
+            peak = peak_indices[0]
+            p0 = [
+                np.min(y),
+                0,
+                y[peak],
+                x[peak],
+                2,
+            ]
+
+            params, _ = curve_fit(one_peak_model, x, y, p0=p0, maxfev=10000,)
+            fit_y = one_peak_model(x, *params,)
+            tm1 = params[3]
+
+        else:
+
+            peak1 = peak_indices[0]
+            peak2 = peak_indices[1]
+
+            if x[peak1] > x[peak2]:
+                peak1, peak2 = peak2, peak1
+
+            p0 = [
+                np.min(y),
+                0,
+                y[peak1],
+                x[peak1],
+                2,
+                y[peak2],
+                x[peak2],
+                2,]
+
+            params, _ = curve_fit(two_peak_model, x, y, p0=p0, maxfev=10000,)
+            fit_y = two_peak_model(x, *params,)
+
+            tm1 = params[3]
+            tm2 = params[6]
 
         plt.plot(
-            temperature,
-            smooth_y,
+            x,
+            fit_y,
             color="black",
             linewidth=2.5,
-            label="Mean fit",
+            label="Peak fit",
             zorder=10,)
 
-    tm = None
+        if show_tm:
+            plt.axvline(
+                tm1,
+                color="red",
+                linestyle="--",
+                linewidth=1.5,)
 
-    if smooth and show_tm and signal == "dBcm":
-        peak_idx = np.argmax(smooth_y)
-        tm = temperature[peak_idx]
+            if tm2 is not None:
+                plt.axvline(
+                    tm2,
+                    color="red",
+                    linestyle="--",
+                    linewidth=1.5,)
 
-        plt.axvline(
-            tm,
-            color="red",
-            linestyle="--",
-            linewidth=1.5,
-            label="Tm",)
+        if show_tonset:
+            peak_idx = np.argmax(fit_y)
 
+            left_idx = max(peak_idx - 10, 0,)
+            right_idx = min(peak_idx + 10, len(x),)
 
-    if smooth and show_tonset and signal == "dBcm":
-        peak_idx = np.argmax(smooth_y)
-        left_idx = max(peak_idx - 10, 0,)
+            slope, intercept = np.polyfit(
+                x[left_idx:right_idx],
+                fit_y[left_idx:right_idx],
+                1,)
+            baseline = np.mean(fit_y[:10])
 
-        right_idx = min(peak_idx + 10, len(temperature),)
+            tonset = (baseline - intercept) / slope
 
-        slope, intercept, *_ = linregress(
-            temperature[left_idx:right_idx],
-            smooth_y[left_idx:right_idx],)
-
-        baseline = np.mean(smooth_y[:10])
-        tonset = (baseline - intercept) / slope
-
-        plt.axvline(
-            tonset,
-            color="darkorange",
-            linestyle="--",
-            linewidth=1.5,
-            label="Tonset",)
+            plt.axvline(
+                tonset,
+                color="darkorange",
+                linestyle="--",
+                linewidth=1.5,
+                label="Tonset", )
 
     if show_values:
         text_lines = []
 
         if tonset is not None:
             text_lines.append(f"Tonset = {tonset:.1f} °C")
-        if tm is not None:
-            text_lines.append(f"Tm = {tm:.1f} °C")
+        if tm1 is not None:
+            text_lines.append(f"Tm1 = {tm1:.1f} °C")
+        if tm2 is not None:
+            text_lines.append(f"Tm2 = {tm2:.1f} °C")
+        if text_lines:
+            plt.gca().text(
+                0.98,
+                0.98,
+                "\n".join(text_lines),
+                transform=plt.gca().transAxes,
+                ha="right",
+                va="top",
+                bbox=dict(
+                    facecolor="white",
+                    edgecolor="black",
+                    alpha=0.9,),
+            )
 
-        ax = plt.gca()
-
-        ax.text(
-            0.98,
-            0.98,
-            "\n".join(text_lines),
-            transform=ax.transAxes,
-            ha="right",
-            va="top",
-            fontsize=9,
-            bbox=dict(
-                facecolor="white",
-                edgecolor="black",
-                alpha=0.9,),)
-
-    plt.xlim(left=min(experiment_data[sample_keys[0]]["Temperature"]),)
+    plt.xlim(left=min(experiment_data[sample_keys[0]]["Temperature"]))
     plt.xlabel("Temperature (°C)")
     plt.ylabel(signal)
 
