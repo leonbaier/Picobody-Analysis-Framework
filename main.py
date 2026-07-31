@@ -88,7 +88,8 @@ from wet_lab_analysis import (
     report_sec_fractions,
     load_bli_dataset,
     plot_bli_runs,
-    load_all_supr_dsf_exports)
+    load_all_supr_dsf_exports,
+    plot_supr_dsf)
 
 
 # ---------------Switches-----------------------
@@ -127,7 +128,8 @@ md_root = Path(r"C:\Users\ge63laz\PycharmProjects\Masterthesis_Picobodies\pc_clu
 archive_root = Path(r"C:\Users\ge63laz\PyCharmProjects\Masterthesis_Picobodies\data_saved\molecular_dynamics")
 
 save_dir_data = Path("data_saved")
-save_dir_plots = Path(save_dir_data / "plots")
+save_dir_dry_lab_plots = Path(save_dir_data / "dry_lab_plots")
+save_dir_wet_lab_plots = Path(save_dir_data / "wet_lab_plots")
 save_dir_variable_data = Path(save_dir_data / "variable_data_etc")
 save_dir_structure_prediction = Path(save_dir_data / "structure_prediction")
 save_dir_wetlab = Path(save_dir_data / "wet_lab_results")
@@ -144,7 +146,8 @@ save_dir_wetlab_supr_dsf = Path(save_dir_wetlab / "SUPR-DSF")
 
 
 save_dir_variable_data.mkdir(exist_ok=True)
-save_dir_plots.mkdir(exist_ok=True)
+save_dir_dry_lab_plots.mkdir(exist_ok=True)
+save_dir_wet_lab_plots.mkdir(exist_ok=True)
 
 if run_all_bool:
     general_sequence_analysis_bool = True
@@ -194,8 +197,8 @@ print(f"Number of potential binders (candidates): {len(candidate_sequences)}")
 # ---------------general sequence analysis--------------------------
 if general_sequence_analysis_bool:
     print("\n--------------------General Sequence analysis--------------------")
-    plot_length_distribution(unique_global, save_dir_plots)
-    plot_occurrence_distribution(unique_global, save_dir_plots)
+    plot_length_distribution(unique_global, save_dir_dry_lab_plots)
+    plot_occurrence_distribution(unique_global, save_dir_dry_lab_plots)
     print("Plots for length distribution and occurrence distribution were saved.")
 
     alignment_path = run_clustalw_alignment_from_fasta(
@@ -204,10 +207,10 @@ if general_sequence_analysis_bool:
         output_dir=save_dir_variable_data,
         output_prefix="unique_global_alignment")
 
-    plot_gap_distribution(alignment_path, save_dir_plots)
-    plot_entropy_distribution(alignment_path, save_dir_plots)
-    plot_sequence_logo(alignment_path, save_dir_plots, include_gaps=False, plot_title="Logo of Global Unique Sequences")
-    plot_sequence_logo(alignment_path, save_dir_plots, include_gaps=True, plot_title="Logo of Global Unique Sequences (with gaps)")
+    plot_gap_distribution(alignment_path, save_dir_dry_lab_plots)
+    plot_entropy_distribution(alignment_path, save_dir_dry_lab_plots)
+    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=False, plot_title="Logo of Global Unique Sequences")
+    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=True, plot_title="Logo of Global Unique Sequences (with gaps)")
     print(f"Plots for {alignment_path} with the gap distribution, the entropy distribution and the logos (with and without gaps) were saved.")
 
 
@@ -229,10 +232,10 @@ if cysteine_sequence_analysis_bool:
         output_dir=save_dir_variable_data,
         output_prefix="cut_DSATYY_WGXG_unique_vs_structure_picobodies")
 
-    plot_gap_distribution(alignment_path, save_dir_plots)
-    plot_entropy_distribution(alignment_path, save_dir_plots)
-    plot_sequence_logo(alignment_path, save_dir_plots, include_gaps=False, plot_title="Logo of Cut Global Unique Sequences")
-    plot_sequence_logo(alignment_path, save_dir_plots, include_gaps=True, plot_title="Logo of Cut Global Unique Sequences (with gaps)")
+    plot_gap_distribution(alignment_path, save_dir_dry_lab_plots)
+    plot_entropy_distribution(alignment_path, save_dir_dry_lab_plots)
+    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=False, plot_title="Logo of Cut Global Unique Sequences")
+    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=True, plot_title="Logo of Cut Global Unique Sequences (with gaps)")
     print(f"Plots for {alignment_path} with the gap distribution, the entropy distribution and the logos (with and without gaps) were saved.\n")
 
     # from previously aligned knobs, isolate knob-domain and compare again
@@ -258,29 +261,29 @@ if cysteine_sequence_analysis_bool:
         output_dir=save_dir_variable_data,
         output_prefix="cut_deduplicated_knobs_unique_vs_structure_picobodies")
 
-    plot_gap_distribution(alignment_path, save_dir_plots)
-    plot_entropy_distribution(alignment_path, save_dir_plots)
-    plot_sequence_logo(alignment_path, save_dir_plots, include_gaps=False, plot_title="Logo with Isolated Knobs of Global Unique Sequences")
-    plot_sequence_logo(alignment_path, save_dir_plots, include_gaps=True, plot_title="Logo with Isolated Knobs of Global Unique Sequences (with gaps)")
+    plot_gap_distribution(alignment_path, save_dir_dry_lab_plots)
+    plot_entropy_distribution(alignment_path, save_dir_dry_lab_plots)
+    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=False, plot_title="Logo with Isolated Knobs of Global Unique Sequences")
+    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=True, plot_title="Logo with Isolated Knobs of Global Unique Sequences (with gaps)")
     print(
         f"Plots for {alignment_path} with the gap distribution, the entropy distribution and the logos (with and without gaps) were saved.\n")
 
     # cysteine clustering with only knobs
     print("Cysteine clustering with only knobs:")
     clusters, _, _, _, _ = cysteine_clustering(aln_path=Path(save_dir_variable_data /"cut_deduplicated_knobs_unique_vs_structure_picobodies.aln"),
-                        output_dir=Path(save_dir_plots),
+                        output_dir=Path(save_dir_dry_lab_plots),
                         output_prefix="cut_deduplicated_knobs_unique",
                         n_ignore = 32,
                         cluster_range = range(2,10),
                         debug=DEBUG)
-    plot_cluster_logos(clusters, save_dir_plots, output_prefix="cut_deduplicated_knobs_unique", include_gaps = True)
-    plot_cluster_logos(clusters, save_dir_plots, output_prefix="cut_deduplicated_knobs_unique", include_gaps = True, highlight_aa="C")
+    plot_cluster_logos(clusters, save_dir_dry_lab_plots, output_prefix="cut_deduplicated_knobs_unique", include_gaps = True)
+    plot_cluster_logos(clusters, save_dir_dry_lab_plots, output_prefix="cut_deduplicated_knobs_unique", include_gaps = True, highlight_aa="C")
 
     # cystein clustering with knobs + experimental structures
     print("\nCysteine clustering with knobs + experimental structures:")
     clusters, Z, ids, near_knobs_to_knobs, knob_ids = cysteine_clustering(
         aln_path=Path(save_dir_variable_data / "cut_deduplicated_knobs_unique_vs_structure_picobodies.aln"),
-        output_dir=Path(save_dir_plots),
+        output_dir=Path(save_dir_dry_lab_plots),
         output_prefix=f"cut_deduplicated_knobs_unique_vs_structure_picobodies",
         n_ignore=0,
         cluster_range=range(2, 20),
@@ -292,18 +295,18 @@ if cysteine_sequence_analysis_bool:
     save_clusters(clusters, save_dir_variable_data / "clusters.pkl")
     export_clusters_to_txt(clusters, save_dir_variable_data / "clusters_full_table.txt", truncate_seq=False)
 
-    plot_cluster_logos(clusters, save_dir_plots, output_prefix="cut_deduplicated_knobs_unique_vs_structure_picobodies", include_gaps=True)
-    plot_cluster_logos(clusters, save_dir_plots, output_prefix="cut_deduplicated_knobs_unique_vs_structure_picobodies", include_gaps=True,
+    plot_cluster_logos(clusters, save_dir_dry_lab_plots, output_prefix="cut_deduplicated_knobs_unique_vs_structure_picobodies", include_gaps=True)
+    plot_cluster_logos(clusters, save_dir_dry_lab_plots, output_prefix="cut_deduplicated_knobs_unique_vs_structure_picobodies", include_gaps=True,
                        highlight_aa="C")
     cluster_summary_to_latex(
         clusters=clusters,
         output_tex_path=(save_dir_variable_data / "cluster_summary_cysteine_topology_cut_deduplicated_knobs_unique_vs_structure_picobodies.tex"))
     plot_cysteine_position_heatmap(
         clusters=clusters,
-        save_path=(save_dir_plots / "cysteine_position_heatmap_cut_deduplicated_knobs_unique_vs_structure_picobodies.png"))
+        save_path=(save_dir_dry_lab_plots / "cysteine_position_heatmap_cut_deduplicated_knobs_unique_vs_structure_picobodies.png"))
     plot_cysteine_spacing_violin(
         clusters=clusters,
-        save_path=save_dir_plots / "cysteine_spacing_violin_cut_deduplicated_knobs_unique_vs_structure_picobodies.png")
+        save_path=save_dir_dry_lab_plots / "cysteine_spacing_violin_cut_deduplicated_knobs_unique_vs_structure_picobodies.png")
 
     identity_results = compute_sequence_identity_matrix(
         alignment_path=save_dir_variable_data / "cut_deduplicated_knobs_unique_vs_structure_picobodies.aln",
@@ -443,7 +446,7 @@ if structure_prediction_analysis_bool:
                 plddt_stats,
                 model_to_cluster,
                 display_index=display_index,
-                save_path=(save_dir_plots / f"plddt_landscape_{suffix}.png"),
+                save_path=(save_dir_dry_lab_plots / f"plddt_landscape_{suffix}.png"),
                 max_residue_len=global_max_len,
                 model_name=f"{cfg['label']} ({ligand_state})")
 
@@ -471,7 +474,7 @@ if structure_prediction_analysis_bool:
                     chain_stats,
                     model_to_cluster_chain,
                     display_index=display_index,
-                    save_path=(save_dir_plots / f"plddt_landscape_{suffix}_chainA.png"),
+                    save_path=(save_dir_dry_lab_plots / f"plddt_landscape_{suffix}_chainA.png"),
                     max_residue_len=None,
                     model_name=f"{cfg['label']} ({ligand_state}, chain A)")
 
@@ -482,7 +485,7 @@ if structure_prediction_analysis_bool:
                         stats_chainA=subset_chain,
                         tested_ids=pure_tested_ids,
                         comparison_ids=pure_comparison_ids,
-                        save_path=(save_dir_plots / f"{model_name}_tested_vs_comparison.png"),
+                        save_path=(save_dir_dry_lab_plots / f"{model_name}_tested_vs_comparison.png"),
                         model_name=cfg["label"],)
 
                     plot_mean_plddt_groups(
@@ -490,7 +493,7 @@ if structure_prediction_analysis_bool:
                         stats_chainA=subset_chain,
                         tested_ids=pure_tested_ids,
                         comparison_ids=pure_comparison_ids,
-                        save_path=(save_dir_plots / f"{model_name}_tested_vs_comparison_mean.png"),
+                        save_path=(save_dir_dry_lab_plots / f"{model_name}_tested_vs_comparison_mean.png"),
                         model_name=cfg["label"],)
 
     CONDITIONS = [
@@ -530,7 +533,7 @@ if structure_prediction_analysis_bool:
         plot_mean_plddt_multi_models(
             stats_dict,
             labels=list(stats_dict.keys()),
-            save_path=(save_dir_plots / f"plddt_mean_comparison_{ligand_state.replace(' ', '_')}.png"),
+            save_path=(save_dir_dry_lab_plots / f"plddt_mean_comparison_{ligand_state.replace(' ', '_')}.png"),
             display_index=display_index,
             max_structure_index=max(display_index.values()),
             title=ligand_state,)
@@ -540,7 +543,7 @@ if structure_prediction_analysis_bool:
             plot_mean_plddt_multi_models(
                 stats_chain_dict,
                 labels=list(stats_chain_dict.keys()),
-                save_path=(save_dir_plots / f"plddt_mean_comparison_{ligand_state.replace(' ', '_')}_chainA.png"),
+                save_path=(save_dir_dry_lab_plots / f"plddt_mean_comparison_{ligand_state.replace(' ', '_')}_chainA.png"),
                 display_index=display_index,
                 max_structure_index=max(display_index.values()),
                 title=f"{ligand_state} (chain A)",)
@@ -701,7 +704,7 @@ if wet_lab_analysis_bool:
             run_name=variant,
             signals=["UV", "Conc B", "Fraction"],
             fraction_filter=filter_ranges,
-            save_path=(save_dir_plots / f"{variant_short}_affinity_chromatography.png"),
+            save_path=(save_dir_wet_lab_plots / f"{variant_short}_affinity_chromatography.png"),
             title=f"Affinity Chromatography {variant_short}")
 
     plot_affinity_chromatography_run(
@@ -710,7 +713,7 @@ if wet_lab_analysis_bool:
                   "20260722_AffinityCaptureSelectBovLC_mCloverV13_50ml", "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml"],
         run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14"],
         signals=["UV", "Conc B"],
-        save_path=save_dir_plots / "affinity_chromatography_all.png",
+        save_path=save_dir_wet_lab_plots / "affinity_chromatography_all.png",
         title="Affinity Chromatography mCloverV1/12/13/14")
 
 
@@ -730,7 +733,7 @@ if wet_lab_analysis_bool:
                   "20260724_Superose_6_Increase_mCloverV13", "20260724_Superose_6_Increase_mCloverV14"],
         run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14"],
         signals=["UV"],
-        save_path=save_dir_plots / "sec_chromatography_all.png",
+        save_path=save_dir_wet_lab_plots / "sec_chromatography_all.png",
         title="Size Exclusion Chromatography mCloverV1/12/13/14")
 
     report_sec_fractions(
@@ -750,7 +753,7 @@ if wet_lab_analysis_bool:
                 "mClover_PBS-Tween_0.025",
                 f"mClover{variant}_alone_0.200",
                 f"mClover{variant}_mClover_0.200",],
-            save_path=(save_dir_plots / f"BLI_{variant}.png"),
+            save_path=(save_dir_wet_lab_plots / f"BLI_{variant}.png"),
             title=f"BLI mClover{variant}",)
 
     special_case_bli = [{
@@ -775,13 +778,33 @@ if wet_lab_analysis_bool:
             bli_data=bli_data,
             date=cfg["date"],
             run_names=cfg["run_names"],
-            save_path=save_dir_plots / cfg["save_name"],
+            save_path=save_dir_wet_lab_plots / cfg["save_name"],
             title=cfg["title"],)
 
 
     # plot SUPR-DSF runs
     supr_dsf_data = load_all_supr_dsf_exports(save_dir_wetlab_supr_dsf)
 
+    for variant in ["PBS", "V1", "V12", "V13",]:
+        plot_supr_dsf(
+            supr_dsf_data=supr_dsf_data,
+            experiment="20260730_mCloverV1-12-13_Export_30_07_2026",
+            sample=variant,
+            signal="Bcm (310.0-390.0nm)",
+            smooth=True,
+            save_path=save_dir_wet_lab_plots / f"{variant}_BCM.png",
+            title=f"mClover {variant} Thermal Ramp",)
+        plot_supr_dsf(
+            supr_dsf_data=supr_dsf_data,
+            experiment="20260730_mCloverV1-12-13_Export_30_07_2026",
+            sample=variant,
+            signal="dBcm",
+            smooth=True,
+            show_tm=True,
+            show_tonset=True,
+            show_values=True,
+            save_path=save_dir_wet_lab_plots / f"{variant}_dBCM.png",
+            title=f"mClover {variant} dBCM",)
 
 
 

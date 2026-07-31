@@ -5,6 +5,9 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 from pypdf import PdfReader
+from scipy.signal import savgol_filter
+from scipy.stats import linregress
+
 
 def load_akta_csv(csv_path: str | Path) -> dict:
 
@@ -688,3 +691,133 @@ def load_all_supr_dsf_exports(save_dir: str | Path,
         all_data[export_dir.name] = (load_supr_dsf_export( thermal_file))
 
     return all_data
+
+
+def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str, smooth: bool = True,
+                  show_tm: bool = False, show_tonset: bool = False, show_values: bool = False, save_path=None,
+                  title: str | None = None,
+):
+
+    if experiment not in supr_dsf_data:
+        raise KeyError(f"Experiment '{experiment}' not found.")
+
+    experiment_data = supr_dsf_data[experiment]
+    sample_keys = [key for key in experiment_data if key.endswith(f"_{sample}")]
+
+    if not sample_keys:
+        raise KeyError(f"No samples found for '{sample}'.")
+
+    plt.figure(figsize=(8, 5))
+    colors = [
+        "tab:blue",
+        "tab:orange",
+        "tab:green",]
+
+    for i, sample_key in enumerate(sample_keys):
+        df = experiment_data[sample_key]
+        plt.scatter(
+            df["Temperature"],
+            df[signal],
+            s=12,
+            color=colors[i % len(colors)],
+            label=f"Replicate {i + 1}",)
+
+    if smooth:
+        reference_df = experiment_data[sample_keys[0]]
+        temperature = (reference_df["Temperature"].to_numpy())
+        y_stack = np.vstack([
+            experiment_data[key][signal].to_numpy()
+            for key in sample_keys])
+
+        mean_y = np.mean(y_stack, axis=0,)
+
+        smooth_y = savgol_filter(
+            mean_y,
+            window_length=11,
+            polyorder=3,)
+
+        plt.plot(
+            temperature,
+            smooth_y,
+            color="black",
+            linewidth=2.5,
+            label="Mean fit",
+            zorder=10,)
+
+    tm = None
+
+    if smooth and show_tm and signal == "dBcm":
+        peak_idx = np.argmax(smooth_y)
+        tm = temperature[peak_idx]
+
+        plt.axvline(
+            tm,
+            color="red",
+            linestyle="--",
+            linewidth=1.5,
+            label="Tm",)
+
+
+    if smooth and show_tonset and signal == "dBcm":
+        peak_idx = np.argmax(smooth_y)
+        left_idx = max(peak_idx - 10, 0,)
+
+        right_idx = min(peak_idx + 10, len(temperature),)
+
+        slope, intercept, *_ = linregress(
+            temperature[left_idx:right_idx],
+            smooth_y[left_idx:right_idx],)
+
+        baseline = np.mean(smooth_y[:10])
+        tonset = (baseline - intercept) / slope
+
+        plt.axvline(
+            tonset,
+            color="darkorange",
+            linestyle="--",
+            linewidth=1.5,
+            label="Tonset",)
+
+    if show_values:
+        text_lines = []
+
+        if tonset is not None:
+            text_lines.append(f"Tonset = {tonset:.1f} °C")
+        if tm is not None:
+            text_lines.append(f"Tm = {tm:.1f} °C")
+
+        ax = plt.gca()
+
+        ax.text(
+            0.98,
+            0.98,
+            "\n".join(text_lines),
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            fontsize=9,
+            bbox=dict(
+                facecolor="white",
+                edgecolor="black",
+                alpha=0.9,),)
+
+    plt.xlim(left=min(experiment_data[sample_keys[0]]["Temperature"]),)
+    plt.xlabel("Temperature (°C)")
+    plt.ylabel(signal)
+
+    if title:
+        plt.title(title)
+    else:
+        plt.title(f"{sample} | {signal}")
+
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300,)
+        print(f"Plot written to: {save_path}")
+    else:
+        plt.show()
+
+    plt.close()
