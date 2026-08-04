@@ -693,6 +693,62 @@ def load_all_supr_dsf_exports(save_dir: str | Path,
     return all_data
 
 
+from scipy.signal import savgol_filter
+
+
+def calculate_tonset_bcm(supr_dsf_data: dict, experiment: str, sample: str,
+) -> float:
+
+    experiment_data = supr_dsf_data[experiment]
+
+    sample_keys = [
+        key
+        for key in experiment_data
+        if key.endswith(f"_{sample}")]
+
+    if not sample_keys:
+        raise KeyError(f"No samples found for '{sample}'.")
+
+    reference_df = experiment_data[sample_keys[0]]
+    x = reference_df["Temperature"].to_numpy()
+
+    y_stack = np.vstack([experiment_data[key]["Bcm (310.0-390.0nm)"].to_numpy() for key in sample_keys])
+
+    y = np.mean( y_stack, axis=0,)
+
+    # remove duplicate temperatures
+    mask = np.concatenate(( [True], np.diff(x) > 0,))
+
+    x = x[mask]
+    y = y[mask]
+
+    # smooth BCM curve
+    y = savgol_filter(
+        y,
+        window_length=11,
+        polyorder=3,)
+
+    baseline_slope, baseline_intercept = np.polyfit( x[:20], y[:20], 1,)
+    gradient = np.gradient(y,x,)
+
+    search_mask = ((x > 40) & (x < 80))
+    search_indices = np.where(search_mask)[0]
+
+    steepest_idx = search_indices[np.argmax(gradient[search_mask])]
+    x0 = x[steepest_idx]
+    y0 = y[steepest_idx]
+
+    tangent_slope = gradient[steepest_idx]
+
+    tangent_intercept = (y0 - tangent_slope * x0)
+
+    tonset = (baseline_intercept - tangent_intercept) / (tangent_slope - baseline_slope)
+
+    print(f"{sample} Tonset: {tonset:.2f} °C")
+
+    return tonset
+
+
 # fit functions
 def gaussian(x, amplitude, center, sigma,):
     return amplitude* np.exp(-((x - center) ** 2) / (2 * sigma ** 2))

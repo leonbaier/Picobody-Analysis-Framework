@@ -89,6 +89,7 @@ from wet_lab_analysis import (
     load_bli_dataset,
     plot_bli_runs,
     load_all_supr_dsf_exports,
+    calculate_tonset_bcm,
     plot_supr_dsf)
 
 
@@ -771,7 +772,16 @@ if wet_lab_analysis_bool:
                 "mCloverV13_alone_0.200",
                 "mCloverV13_mClover_0.200",],
             "save_name": "BLI_V13_3.png",
-            "title": "BLI mCloverV13",},]
+            "title": "BLI mCloverV13",},
+        {
+            "date": "2026-08-03",
+            "run_names": [
+                "mClover_PBS_0.025",
+                "mCloverV13_alone_0.200",
+                "mCloverV13_mClover_0.200", ],
+            "save_name": "BLI_V13_4.png",
+            "title": "BLI mCloverV13", },
+    ]
 
     for cfg in special_case_bli:
         plot_bli_runs(
@@ -786,24 +796,27 @@ if wet_lab_analysis_bool:
     supr_dsf_data = load_all_supr_dsf_exports(save_dir_wetlab_supr_dsf)
 
     for variant in ["PBS", "V1", "V12", "V13",]:
+        tonset = calculate_tonset_bcm(
+            supr_dsf_data=supr_dsf_data,
+            experiment=("20260730_mCloverV1-12-13_Export_30_07_2026"),
+            sample=variant,)
         plot_supr_dsf(
             supr_dsf_data=supr_dsf_data,
-            experiment="20260730_mCloverV1-12-13_Export_30_07_2026",
+            experiment=("20260730_mCloverV1-12-13_Export_30_07_2026"),
             sample=variant,
             signal="Bcm (310.0-390.0nm)",
-            smooth=True,
-            save_path=save_dir_wet_lab_plots / f"{variant}_BCM.png",
+            save_path=(save_dir_wet_lab_plots / f"{variant}_BCM.png"),
             title=f"mClover {variant} Thermal Ramp",)
         plot_supr_dsf(
             supr_dsf_data=supr_dsf_data,
-            experiment="20260730_mCloverV1-12-13_Export_30_07_2026",
+            experiment=("20260730_mCloverV1-12-13_Export_30_07_2026"),
             sample=variant,
             signal="dBcm",
             smooth=True,
+            tonset=tonset,
             show_tm=True,
-            show_tonset=True,
             show_values=True,
-            save_path=save_dir_wet_lab_plots / f"{variant}_dBCM.png",
+            save_path=(save_dir_wet_lab_plots / f"{variant}_dBCM.png"),
             title=f"mClover {variant} dBCM",)
 
 
