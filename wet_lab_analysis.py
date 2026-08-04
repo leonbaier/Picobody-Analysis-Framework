@@ -5,8 +5,7 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 from pypdf import PdfReader
-from scipy.signal import find_peaks
-from scipy.stats import linregress
+from scipy.signal import find_peaks, savgol_filter
 from scipy.optimize import curve_fit
 
 
@@ -706,7 +705,7 @@ def two_peak_model(x, offset, slope, a1, c1, s1, a2, c2, s2,):
 
 
 def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str, smooth: bool = True,
-        show_tm: bool = False, show_tonset: bool = False, show_values: bool = False, save_path=None, title: str | None = None,
+        show_tm: bool = False, show_values: bool = False, tonset: float | None = None, save_path=None, title: str | None = None,
 ):
 
     if experiment not in supr_dsf_data:
@@ -739,7 +738,6 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
 
     tm1 = None
     tm2 = None
-    tonset = None
 
     if smooth and signal == "dBcm":
 
@@ -757,29 +755,27 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
 
         if n_transitions == 0:
             peak = np.argmax(y)
-            p0 = [
-                np.min(y),
-                0,
-                y[peak],
-                x[peak],
-                2,
-            ]
+            p0 = [np.min(y), 0, y[peak], x[peak], 2]
 
-            params, _ = curve_fit( one_peak_model, x, y, p0=p0, maxfev=10000,)
+            params, _ = curve_fit(one_peak_model, x, y, p0=p0,
+                bounds=(
+                    [-np.inf, -np.inf, 0, min(x), 0],
+                    [np.inf, np.inf, np.inf, max(x), 30],),
+                maxfev=10000,)
+
             fit_y = one_peak_model(x, *params,)
             tm1 = params[3]
 
         elif n_transitions == 1:
             peak = peak_indices[0]
-            p0 = [
-                np.min(y),
-                0,
-                y[peak],
-                x[peak],
-                2,
-            ]
+            p0 = [np.min(y), 0, y[peak], x[peak], 2]
 
-            params, _ = curve_fit(one_peak_model, x, y, p0=p0, maxfev=10000,)
+            params, _ = curve_fit(one_peak_model, x, y, p0=p0,
+                bounds=(
+                    [-np.inf, -np.inf, 0, min(x), 0],
+                    [np.inf, np.inf, np.inf, max(x), 30],),
+                maxfev=10000,)
+
             fit_y = one_peak_model(x, *params,)
             tm1 = params[3]
 
@@ -791,17 +787,19 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
             if x[peak1] > x[peak2]:
                 peak1, peak2 = peak2, peak1
 
-            p0 = [
-                np.min(y),
-                0,
-                y[peak1],
-                x[peak1],
-                2,
-                y[peak2],
-                x[peak2],
-                2,]
+            p0 = [np.min(y), 0, y[peak1], x[peak1], 2, y[peak2], x[peak2], 2,]
 
-            params, _ = curve_fit(two_peak_model, x, y, p0=p0, maxfev=10000,)
+            params, _ = curve_fit(two_peak_model, x, y, p0=p0,
+                bounds=(
+                    [-np.inf, -np.inf,
+                     0, min(x), 0,
+                     0, min(x), 0,],
+                    [np.inf, np.inf,
+                     np.inf, max(x), 30,
+                     np.inf, max(x), 30,],
+                ),
+                maxfev=10000,)
+
             fit_y = two_peak_model(x, *params,)
 
             tm1 = params[3]
@@ -829,26 +827,13 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
                     linestyle="--",
                     linewidth=1.5,)
 
-        if show_tonset:
-            peak_idx = np.argmax(fit_y)
-
-            left_idx = max(peak_idx - 10, 0,)
-            right_idx = min(peak_idx + 10, len(x),)
-
-            slope, intercept = np.polyfit(
-                x[left_idx:right_idx],
-                fit_y[left_idx:right_idx],
-                1,)
-            baseline = np.mean(fit_y[:10])
-
-            tonset = (baseline - intercept) / slope
-
+        if tonset is not None:
             plt.axvline(
                 tonset,
                 color="darkorange",
                 linestyle="--",
                 linewidth=1.5,
-                label="Tonset", )
+                label="Tonset",)
 
     if show_values:
         text_lines = []
