@@ -89,7 +89,6 @@ from wet_lab_analysis import (
     load_bli_dataset,
     plot_bli_runs,
     load_all_supr_dsf_exports,
-    calculate_tonset_bcm,
     plot_supr_dsf)
 
 
@@ -796,10 +795,6 @@ if wet_lab_analysis_bool:
     supr_dsf_data = load_all_supr_dsf_exports(save_dir_wetlab_supr_dsf)
 
     for variant in ["PBS", "V1", "V12", "V13",]:
-        tonset = calculate_tonset_bcm(
-            supr_dsf_data=supr_dsf_data,
-            experiment=("20260730_mCloverV1-12-13_Export_30_07_2026"),
-            sample=variant,)
         plot_supr_dsf(
             supr_dsf_data=supr_dsf_data,
             experiment=("20260730_mCloverV1-12-13_Export_30_07_2026"),
@@ -813,7 +808,6 @@ if wet_lab_analysis_bool:
             sample=variant,
             signal="dBcm",
             smooth=True,
-            tonset=tonset,
             show_tm=True,
             show_values=True,
             save_path=(save_dir_wet_lab_plots / f"{variant}_dBCM.png"),
