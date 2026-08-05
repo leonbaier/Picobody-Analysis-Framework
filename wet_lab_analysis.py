@@ -5,8 +5,238 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 from pypdf import PdfReader
-from scipy.signal import find_peaks, savgol_filter
+from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
+from Bio.SeqUtils.ProtParam import ProteinAnalysis
+
+
+def create_fab_reports(sequence_file: str | Path, output_dir: str | Path,
+) -> dict:
+
+    sequence_file = Path(sequence_file)
+    output_dir = Path(output_dir)
+
+    output_dir.mkdir(parents=True, exist_ok=True,)
+    text = sequence_file.read_text(encoding="utf-8",)
+
+    results = {}
+
+    # --------------------------------------------------
+    # Light chain
+    # --------------------------------------------------
+
+    lc_match = re.search(
+        r"LC\s+SEQUENCE:\s*([A-Z*]+)\s+SIGNAL_PEPTIDE:\s*([A-Z]+)",
+        text,
+        re.DOTALL,
+    )
+
+    if lc_match is None:
+        raise ValueError("Light chain block not found.")
+
+    lc_sequence = lc_match.group(1)
+    lc_signal_peptide = lc_match.group(2)
+
+    # remove stop codon and everything after it
+    lc_sequence = lc_sequence.split("*")[0]
+
+    # remove signal peptide
+    if lc_sequence.startswith(lc_signal_peptide):
+        lc_sequence = lc_sequence[len(lc_signal_peptide):]
+
+    # --------------------------------------------------
+    # Variants
+    # --------------------------------------------------
+
+    variants = re.findall(
+        (
+            r"VARIANT:\s*([A-Za-z0-9_-]+)\s+"
+            r"SEQUENCE:\s*([A-Z*]+)\s+"
+            r"SIGNAL_PEPTIDE:\s*([A-Z]+)"
+        ),
+        text,
+        re.DOTALL,
+    )
+
+    if len(variants) == 0:
+        raise ValueError("No variants found.")
+
+    for (
+        variant_name,
+        hc_sequence,
+        hc_signal_peptide,
+    ) in variants:
+
+        # ----------------------------------------------
+        # sequence cleanup
+        # ----------------------------------------------
+
+        hc_sequence = hc_sequence.split("*")[0]
+
+        if hc_sequence.startswith(hc_signal_peptide):
+            hc_sequence = hc_sequence[len(hc_signal_peptide):]
+
+        fab_sequence = (hc_sequence + lc_sequence)
+
+        # ----------------------------------------------
+        # ProtParam
+        # ----------------------------------------------
+
+        hc = ProteinAnalysis(hc_sequence,)
+        lc = ProteinAnalysis(lc_sequence,)
+
+        fab = ProteinAnalysis(fab_sequence,)
+
+        hc_eps_red, hc_eps_ox = (hc.molar_extinction_coefficient())
+        lc_eps_red, lc_eps_ox = (lc.molar_extinction_coefficient())
+        fab_eps_red, fab_eps_ox = (fab.molar_extinction_coefficient())
+
+        hc_mw = hc.molecular_weight()
+        lc_mw = lc.molecular_weight()
+        fab_mw = fab.molecular_weight()
+
+        hc_abs_red = (hc_eps_red / hc_mw)
+        hc_abs_ox = (hc_eps_ox / hc_mw)
+
+        lc_abs_red = (lc_eps_red / lc_mw)
+        lc_abs_ox = (lc_eps_ox / lc_mw)
+
+        fab_abs_red = (fab_eps_red / fab_mw)
+        fab_abs_ox = (fab_eps_ox / fab_mw)
+
+        result = {
+
+            "HC": {
+                "Length_aa":
+                    len(hc_sequence),
+                "MW_Da":
+                    hc_mw,
+                "pI":
+                    hc.isoelectric_point(),
+                "Epsilon_Oxidized":
+                    hc_eps_ox,
+                "Epsilon_Reduced":
+                    hc_eps_red,
+                "Abs0.1_Oxidized":
+                    hc_abs_ox,
+                "Abs0.1_Reduced":
+                    hc_abs_red,
+                "Trp":
+                    hc_sequence.count("W"),
+                "Tyr":
+                    hc_sequence.count("Y"),
+                "Cys":
+                    hc_sequence.count("C"),
+            },
+
+            "LC": {
+                "Length_aa":
+                    len(lc_sequence),
+                "MW_Da":
+                    lc_mw,
+                "pI":
+                    lc.isoelectric_point(),
+                "Epsilon_Oxidized":
+                    lc_eps_ox,
+                "Epsilon_Reduced":
+                    lc_eps_red,
+                "Abs0.1_Oxidized":
+                    lc_abs_ox,
+                "Abs0.1_Reduced":
+                    lc_abs_red,
+                "Trp":
+                    lc_sequence.count("W"),
+                "Tyr":
+                    lc_sequence.count("Y"),
+                "Cys":
+                    lc_sequence.count("C"),
+            },
+
+            "Fab": {
+                "Length_aa":
+                    len(fab_sequence),
+                "MW_Da":
+                    fab_mw,
+                "pI":
+                    fab.isoelectric_point(),
+                "Epsilon_Oxidized":
+                    fab_eps_ox,
+                "Epsilon_Reduced":
+                    fab_eps_red,
+                "Abs0.1_Oxidized":
+                    fab_abs_ox,
+                "Abs0.1_Reduced":
+                    fab_abs_red,
+                "Trp":
+                    fab_sequence.count("W"),
+                "Tyr":
+                    fab_sequence.count("Y"),
+                "Cys":
+                    fab_sequence.count("C"),
+            },
+        }
+
+        results[variant_name] = result
+
+        report = f"""
+Variant: {variant_name}
+
+Heavy Chain
+-----------
+Number of amino acids [-]: {result["HC"]["Length_aa"]}
+Molecular weight {result["HC"]["MW_Da"]:.2f}
+Theoretical pI [-]: {result["HC"]["pI"]:.2f}
+
+Extinction coefficient oxidized [M^-1 cm^-1]: {result["HC"]["Epsilon_Oxidized"]}
+Extinction coefficient reduced [M^-1 cm^-1]: {result["HC"]["Epsilon_Reduced"]}
+
+Abs 0.1% oxidized [-]: {result["HC"]["Abs0.1_Oxidized"]:.3f}
+Abs 0.1% reduced [-]: {result["HC"]["Abs0.1_Reduced"]:.3f}
+
+Number of tryptophans [-]: {result["HC"]["Trp"]}
+Number of tyrosines [-]: {result["HC"]["Tyr"]}
+Number of cysteines [-]: {result["HC"]["Cys"]}
+
+
+Light Chain
+-----------
+Number of amino acids [-]: {result["LC"]["Length_aa"]}
+Molecular weight {result["LC"]["MW_Da"]:.2f}
+Theoretical pI [-]: {result["LC"]["pI"]:.2f}
+
+Extinction coefficient oxidized [M^-1 cm^-1]: {result["LC"]["Epsilon_Oxidized"]}
+Extinction coefficient reduced [M^-1 cm^-1]: {result["LC"]["Epsilon_Reduced"]}
+
+Abs 0.1% oxidized [-]: {result["LC"]["Abs0.1_Oxidized"]:.3f}
+Abs 0.1% reduced [-]: {result["LC"]["Abs0.1_Reduced"]:.3f}
+
+Number of tryptophans [-]: {result["LC"]["Trp"]}
+Number of tyrosines [-]: {result["LC"]["Tyr"]}
+Number of cysteines [-]: {result["LC"]["Cys"]}
+
+
+Fab Fragment
+------------
+Number of amino acids [-]: {result["Fab"]["Length_aa"]}
+Molecular weight {result["Fab"]["MW_Da"]:.2f}
+Theoretical pI [-]: {result["Fab"]["pI"]:.2f}
+
+Extinction coefficient oxidized [M^-1 cm^-1]: {result["Fab"]["Epsilon_Oxidized"]}
+Extinction coefficient reduced [M^-1 cm^-1]: {result["Fab"]["Epsilon_Reduced"]}
+
+Abs 0.1% oxidized [-]: {result["Fab"]["Abs0.1_Oxidized"]:.3f}
+Abs 0.1% reduced [-]: {result["Fab"]["Abs0.1_Reduced"]:.3f}
+
+Number of tryptophans [-]: {result["Fab"]["Trp"]}
+Number of tyrosines [-]: {result["Fab"]["Tyr"]}
+Number of cysteines [-]: {result["Fab"]["Cys"]}
+""".strip()
+
+        (output_dir / f"{variant_name}.txt").write_text(report, encoding="utf-8",)
+
+        print(f"Created report: {variant_name}.txt")
+
+    return results
 
 
 def load_akta_csv(csv_path: str | Path) -> dict:

@@ -83,6 +83,7 @@ from MD_analysis import (
     create_binder_target_distance_analysis,
     create_minimum_contact_distance_analysis)
 from wet_lab_analysis import (
+    create_fab_reports,
     load_akta_csv,
     plot_affinity_chromatography_run,
     report_sec_fractions,
@@ -121,6 +122,7 @@ FASTA_PATH_SOURCE = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_
 EXCEL_PATH_SOURCE = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_Picobodies\Source_Structure Thesis\Picobody_Sequences_Anti-mClover\Overview_Sequences_Picobody_anti-mClover.xlsx")
 aln_path_knobs_internship = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_Picobodies\Source_Structure Thesis\knobs_internship.aln")
 pdb_folder_knobs_internship = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_Picobodies\Source_Structure Thesis\knobs_internship_structures")
+location_sequences_HC_V1V12V13V14_LC = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_Picobodies\Wet-Lab\HC_V1-V12-V13-V14_LC_sequence.txt")
 seq_mclover3 = "MVSKGEELFTGVVPILVELDGDVNGHKFSVRGEGEGDATNGKLTLKFICTTGKLPVPWPTLVTTFGYGVACFSRYPDHMKQHDFFKSAMPEGYVQERTISFKDDGTYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNFNSHYVYITADKQKNCIKANFKIRHNVEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSHQSKLSKDPNEKRDHMVLLEFVTAAGITHGMDELYK"
 clustalw_path = r"C:\Program Files (x86)\ClustalW2\clustalw2.exe"
 
@@ -679,6 +681,11 @@ if MD_analysis_bool:
 
 if wet_lab_analysis_bool:
     print("\n--------------------wet lab Analysis--------------------")
+
+    # calculate light and heavy chain parameter
+    fab_data = create_fab_reports(
+        sequence_file=location_sequences_HC_V1V12V13V14_LC,
+        output_dir=save_dir_variable_data,)
 
     # plot affinity chromatography results
     affinity_data_all = {}
