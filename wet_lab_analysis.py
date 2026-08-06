@@ -71,6 +71,7 @@ def create_fab_reports(sequence_file: str | Path, output_dir: str | Path,
         # sequence cleanup
         # ----------------------------------------------
 
+        # (*marks stop)
         hc_sequence = hc_sequence.split("*")[0]
 
         if hc_sequence.startswith(hc_signal_peptide):
