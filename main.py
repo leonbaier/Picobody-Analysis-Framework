@@ -701,11 +701,15 @@ if wet_lab_analysis_bool:
         "20260713_AffinityCaptureSelectBovLC_mCloverV1_50mL": [("1.A.3", "1.A.5")],
         "20260722_AffinityCaptureSelectBovLC_mCloverV12_50ml": [("1.B.10", "1.B.8")],
         "20260722_AffinityCaptureSelectBovLC_mCloverV13_50ml": [("1.C.2", "1.C.6")],
-        "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml": [("1.D.11", "1.D.7")],}
+        "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml": [("1.D.11", "1.D.7")],
+        "20260805_AffinityCaptureSelectBovLC_mCloverV14-2_50ml": [("1.A.2", "1.A.5")]}
+
 
     for variant, filter_ranges in fraction_filters.items():
         match = re.search(r"(V\d+)", variant)
         variant_short = match.group(1)
+        if "V14-2" in variant:
+            variant_short = "14-2"
         plot_affinity_chromatography_run(
             data=affinity_data_all,
             run_name=variant,
@@ -717,8 +721,9 @@ if wet_lab_analysis_bool:
     plot_affinity_chromatography_run(
         data=affinity_data_all,
         run_name=["20260713_AffinityCaptureSelectBovLC_mCloverV1_50mL", "20260722_AffinityCaptureSelectBovLC_mCloverV12_50ml",
-                  "20260722_AffinityCaptureSelectBovLC_mCloverV13_50ml", "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml"],
-        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14"],
+                  "20260722_AffinityCaptureSelectBovLC_mCloverV13_50ml", "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml",
+                  "20260805_AffinityCaptureSelectBovLC_mCloverV14-2_50ml"],
+        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14-1", "mCloverV14-2",],
         signals=["UV", "Conc B"],
         save_path=save_dir_wet_lab_plots / "affinity_chromatography_all.png",
         title="Affinity Chromatography mCloverV1/12/13/14")
@@ -737,8 +742,9 @@ if wet_lab_analysis_bool:
     plot_affinity_chromatography_run(
         data=sec_data_all,
         run_name=["20260723_Superose_6_Increase_mCloverV1", "20260723_Superose_6_Increase_mCloverV12",
-                  "20260724_Superose_6_Increase_mCloverV13", "20260724_Superose_6_Increase_mCloverV14"],
-        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14"],
+                  "20260724_Superose_6_Increase_mCloverV13", "20260724_Superose_6_Increase_mCloverV14",
+                  "20260806_Superose_6_Increase_mCloverV14_2",],
+        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14-1", "mCloverV14-2",],
         signals=["UV"],
         save_path=save_dir_wet_lab_plots / "sec_chromatography_all.png",
         title="Size Exclusion Chromatography mCloverV1/12/13/14")

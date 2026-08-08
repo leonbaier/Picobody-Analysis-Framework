@@ -448,7 +448,23 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         else:
             ax.set_title(title)
 
-        ax.legend()
+        handles, labels = ax.get_legend_handles_labels()
+        sort_order = []
+
+        for label in labels:
+            if label.endswith(" - UV"):
+                sort_order.append(0)
+            elif label.endswith(" - Conc B"):
+                sort_order.append(1)
+            else:
+                sort_order.append(2)
+
+        sorted_items = sorted(zip(sort_order, handles, labels), key=lambda x: x[0],)
+
+        handles = [item[1] for item in sorted_items]
+        labels = [item[2] for item in sorted_items]
+
+        ax.legend(handles, labels,)
         plt.tight_layout()
 
         if save_path is not None:
@@ -787,7 +803,8 @@ def load_bli_dataset(folder: str | Path) -> dict:
     return data
 
 
-def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], save_path=None, title: str | None = None,
+def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], run_display_names: list[str] | None = None,
+                  save_path=None, title: str | None = None,
 ):
 
     if date not in bli_data:
