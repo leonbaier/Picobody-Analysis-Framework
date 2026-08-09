@@ -886,6 +886,96 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], run_display_n
     plt.close()
 
 
+def plot_bli_phase_runs(bli_data: dict, runs: list[tuple[str, str]], phases: list[str],
+                        run_display_names: list[str] | None = None, subtract_baseline: dict[str, str] | None = None,
+                        save_path=None, title: str | None = None,
+):
+    if run_display_names is not None:
+        if len(run_display_names) != len(runs):
+            raise ValueError("run_display_names must have the same length as runs.")
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    for i, (date, run_name) in enumerate(runs):
+        if date not in bli_data:
+            raise KeyError(f"Date '{date}' not found.")
+        if run_name not in bli_data[date]["runs"]:
+            raise KeyError(f"Run '{run_name}' not found for date '{date}'.")
+
+        label = (run_display_names[i] if run_display_names is not None else run_name)
+
+        steps = bli_data[date]["steps"]
+        phase_ranges = {}
+        current_time = 0
+
+        for step_name, duration in steps:
+            phase_ranges[step_name] = (current_time, current_time + duration,)
+            current_time += duration
+
+        missing_phases = [phase for phase in phases if phase not in phase_ranges]
+
+        if missing_phases:
+            raise KeyError(f"Unknown phase(s): {missing_phases}")
+
+        phase_intervals = [phase_ranges[phase] for phase in phases]
+
+        df = bli_data[date]["runs"][run_name]
+        mask = np.zeros(len(df), dtype=bool,)
+
+        for start, end in phase_intervals:
+            mask |= (
+                    (df["Time (s)"] >= start)
+                    &
+                    (df["Time (s)"] <= end)
+            )
+
+        df_plot = df.loc[mask].copy()
+        baseline_df = None
+
+        if subtract_baseline is not None:
+            if date not in subtract_baseline:
+                raise KeyError(f"No baseline defined for {date}.")
+
+            baseline_name = subtract_baseline[date]
+
+            if (baseline_name not in bli_data[date]["runs"]):
+                raise KeyError(f"Baseline run '{baseline_name}' not found for date '{date}'.")
+
+            baseline_df = (bli_data[date]["runs"][baseline_name])
+
+            baseline_values = np.interp(
+                df_plot["Time (s)"],
+                baseline_df["Time (s)"],
+                baseline_df["Binding (nm)"],)
+            df_plot["Binding (nm)"] -= (baseline_values)
+
+        ax.plot(
+            df_plot["Time (s)"],
+            df_plot["Binding (nm)"],
+            linewidth=2,
+            label=label,)
+
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Binding (nm)")
+
+    if title is not None:
+        ax.set_title(title)
+    else:
+        ax.set_title("BLI phase comparison")
+
+    ax.legend()
+    ax.grid(alpha=0.3)
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300,)
+        print(f"Plot written to: {save_path}")
+    else:
+        plt.show()
+
+    plt.close()
+
+
 def load_supr_dsf_export(csv_file: str | Path,
 ) -> dict[str, pd.DataFrame]:
 

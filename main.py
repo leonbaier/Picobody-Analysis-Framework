@@ -89,6 +89,7 @@ from wet_lab_analysis import (
     report_sec_fractions,
     load_bli_dataset,
     plot_bli_runs,
+    plot_bli_phase_runs,
     load_all_supr_dsf_exports,
     plot_supr_dsf)
 
@@ -810,6 +811,23 @@ if wet_lab_analysis_bool:
                 f"mCloverV13 Binding Signal",],
             save_path=save_dir_wet_lab_plots / cfg["save_name"],
             title=cfg["title"],)
+
+    plot_bli_phase_runs(
+        bli_data=bli_data,
+        runs=[
+            ("2026-07-27", "mCloverV1_mClover_0.200"),
+            ("2026-07-27", "mCloverV12_mClover_0.200"),
+            ("2026-08-03", "mCloverV13_mClover_0.200"),],
+        phases=["Association", "Dissociation",],
+        subtract_baseline={
+            "2026-07-27": "mClover_PBS-Tween_0.025",
+            "2026-07-27": "mClover_PBS-Tween_0.025",
+            "2026-08-03": "mClover_PBS_0.025",},
+        run_display_names=[
+            "mCloverV1 Ass. and Diss. Phase",
+            "mCloverV12 Ass. and Diss. Phase",
+            "mCloverV13 Ass. and Diss. Phase"],
+        save_path=save_dir_wet_lab_plots / "BLI_all_ass-diss.png",)
 
 
     # plot SUPR-DSF runs
