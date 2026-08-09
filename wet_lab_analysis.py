@@ -809,19 +809,27 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], run_display_n
 
     if date not in bli_data:
         raise KeyError(f"Date '{date}' not found.")
+    if run_display_names is not None:
+        if len(run_display_names) != len(run_names):
+            raise ValueError("run_display_names must have the same length as run_names.")
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    for run_name in run_names:
+    for i, run_name in enumerate(run_names):
         if run_name not in bli_data[date]["runs"]:
             raise KeyError(f"Run '{run_name}' not found for date '{date}'.")
+
+        label = (
+            run_display_names[i]
+            if run_display_names is not None
+            else run_name)
 
         df = bli_data[date]["runs"][run_name]
         ax.plot(
             df["Time (s)"],
             df["Binding (nm)"],
             linewidth=2,
-            label=run_name,)
+            label=label,)
 
     steps = bli_data[date]["steps"]
     cumulative_time = 0

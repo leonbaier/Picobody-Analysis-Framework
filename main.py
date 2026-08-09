@@ -766,6 +766,10 @@ if wet_lab_analysis_bool:
                 "mClover_PBS-Tween_0.025",
                 f"mClover{variant}_alone_0.200",
                 f"mClover{variant}_mClover_0.200",],
+            run_display_names=[
+                "mClover Baseline",
+                f"mClover{variant} Baseline",
+                f"mClover{variant} Binding Signal",],
             save_path=(save_dir_wet_lab_plots / f"BLI_{variant}.png"),
             title=f"BLI mClover{variant}",)
 
@@ -800,6 +804,10 @@ if wet_lab_analysis_bool:
             bli_data=bli_data,
             date=cfg["date"],
             run_names=cfg["run_names"],
+            run_display_names=[
+                "mClover Baseline",
+                f"mCloverV13 Baseline",
+                f"mCloverV13 Binding Signal",],
             save_path=save_dir_wet_lab_plots / cfg["save_name"],
             title=cfg["title"],)
 
