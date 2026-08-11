@@ -772,7 +772,22 @@ if wet_lab_analysis_bool:
                 f"mClover{variant} Baseline",
                 f"mClover{variant} Binding Signal",],
             save_path=(save_dir_wet_lab_plots / f"BLI_{variant}.png"),
-            title=f"BLI mClover{variant}",)
+            title=f"BLI of mClover{variant}",)
+
+    for Fab in ["aGNb53nt", "NoKnob", "mCloverV14",]:
+        plot_bli_runs(
+            bli_data=bli_data,
+            date="2026-08-11",
+            run_names=[
+                "mClover_PBS",
+                f"{Fab}_alone",
+                f"{Fab}_mClover",],
+            run_display_names=[
+                "mClover Baseline",
+                f"{Fab} Baseline",
+                f"{Fab} Binding Signal",],
+            save_path=(save_dir_wet_lab_plots / f"BLI_{Fab}.png"),
+            title=f"BLI of {Fab}",)
 
     special_case_bli = [{
             "date": "2026-07-28",
@@ -817,17 +832,26 @@ if wet_lab_analysis_bool:
         runs=[
             ("2026-07-27", "mCloverV1_mClover_0.200"),
             ("2026-07-27", "mCloverV12_mClover_0.200"),
-            ("2026-08-03", "mCloverV13_mClover_0.200"),],
-        phases=["Association", "Dissociation",],
+            ("2026-08-03", "mCloverV13_mClover_0.200"),
+            ("2026-08-11", "mCloverV14_mClover"),
+            ("2026-08-11", "NoKnob_mClover"),
+            ("2026-08-11", "aGNb53nt_mClover"),],
+        phases=["Association",],
         subtract_baseline={
             "2026-07-27": "mClover_PBS-Tween_0.025",
             "2026-07-27": "mClover_PBS-Tween_0.025",
-            "2026-08-03": "mClover_PBS_0.025",},
+            "2026-08-03": "mClover_PBS_0.025",
+            "2026-08-11": "mClover_PBS",
+            "2026-08-11": "mClover_PBS",
+            "2026-08-11": "mClover_PBS"},
         run_display_names=[
-            "mCloverV1 Ass. and Diss. Phase",
-            "mCloverV12 Ass. and Diss. Phase",
-            "mCloverV13 Ass. and Diss. Phase"],
-        save_path=save_dir_wet_lab_plots / "BLI_all_ass-diss.png",)
+            "mCloverV1 Ass. Phase",
+            "mCloverV12 Ass. Phase",
+            "mCloverV13 Ass. Phase",
+            "mCloverV14 Ass. Phase",
+            "NoKnob-Fab Ass. Phase",
+            "aGNb53nt Ass. Phase",],
+        save_path=save_dir_wet_lab_plots / "BLI_all_ass.png",)
 
 
     # plot SUPR-DSF runs
