@@ -789,6 +789,32 @@ if wet_lab_analysis_bool:
             save_path=(save_dir_wet_lab_plots / f"BLI_{Fab}.png"),
             title=f"BLI of {Fab}",)
 
+    runs = [
+        ("mCloverV14_2",
+         "mCloverV14_alone",
+         "mCloverV14_mClover",),
+        ("GNb53nt_0.025",
+         "GNb53nt_alone_0",
+         "GNb53nt_mClover_0",),
+        ("GNb53nt_500nM",
+         "GNb53nt_alone_500nM",
+         "GNb53nt_mClover_500nM",),]
+
+    for label, baseline_run, binding_run in runs:
+        plot_bli_runs(
+            bli_data=bli_data,
+            date="2026-08-12",
+            run_names=[
+                "mClover_PBS",
+                baseline_run,
+                binding_run,],
+            run_display_names=[
+                "mClover Baseline",
+                f"{label} Baseline",
+                f"{label} Binding Signal",],
+            save_path=(save_dir_wet_lab_plots / f"BLI_{label}.png"),
+            title=f"BLI of {label}",)
+
     special_case_bli = [{
             "date": "2026-07-28",
             "run_names": [
@@ -856,7 +882,6 @@ if wet_lab_analysis_bool:
 
     # plot SUPR-DSF runs
     supr_dsf_data = load_all_supr_dsf_exports(save_dir_wetlab_supr_dsf)
-    print(supr_dsf_data["20260812_mCloverV14_Export_12_08_2026"])
 
     experiments = [
         ("PBS", "PBS", "20260730_mCloverV1-12-13_Export_30_07_2026"),
@@ -874,8 +899,7 @@ if wet_lab_analysis_bool:
             sample=variant_short,
             signal="Bcm (310.0-390.0nm)",
             save_path=(save_dir_wet_lab_plots / f"{variant_short}_{experiment}_BCM.png"),
-            title=f"{variant} Thermal Ramp",
-        )
+            title=f"{variant} Thermal Ramp",)
 
         plot_supr_dsf(
             supr_dsf_data=supr_dsf_data,
