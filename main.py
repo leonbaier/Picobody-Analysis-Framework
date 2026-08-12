@@ -856,25 +856,37 @@ if wet_lab_analysis_bool:
 
     # plot SUPR-DSF runs
     supr_dsf_data = load_all_supr_dsf_exports(save_dir_wetlab_supr_dsf)
+    print(supr_dsf_data["20260812_mCloverV14_Export_12_08_2026"])
 
-    for variant in ["PBS", "V1", "V12", "V13",]:
+    experiments = [
+        ("PBS", "PBS", "20260730_mCloverV1-12-13_Export_30_07_2026"),
+        ("mCloverV1", "V1", "20260730_mCloverV1-12-13_Export_30_07_2026"),
+        ("mCloverV12", "V12", "20260730_mCloverV1-12-13_Export_30_07_2026"),
+        ("mCloverV13", "V13", "20260730_mCloverV1-12-13_Export_30_07_2026"),
+        ("PBS", "PBS", "20260812_mCloverV14_Export_12_08_2026"),
+        ("mCloverV14", "V14", "20260812_mCloverV14_Export_12_08_2026"),
+    ]
+
+    for variant, variant_short, experiment in experiments:
         plot_supr_dsf(
             supr_dsf_data=supr_dsf_data,
-            experiment=("20260730_mCloverV1-12-13_Export_30_07_2026"),
-            sample=variant,
+            experiment=experiment,
+            sample=variant_short,
             signal="Bcm (310.0-390.0nm)",
-            save_path=(save_dir_wet_lab_plots / f"{variant}_BCM.png"),
-            title=f"mClover {variant} Thermal Ramp",)
+            save_path=(save_dir_wet_lab_plots / f"{variant_short}_{experiment}_BCM.png"),
+            title=f"{variant} Thermal Ramp",
+        )
+
         plot_supr_dsf(
             supr_dsf_data=supr_dsf_data,
-            experiment=("20260730_mCloverV1-12-13_Export_30_07_2026"),
-            sample=variant,
+            experiment=experiment,
+            sample=variant_short,
             signal="dBcm",
             smooth=True,
             show_tm=True,
             show_values=True,
-            save_path=(save_dir_wet_lab_plots / f"{variant}_dBCM.png"),
-            title=f"mClover {variant} dBCM",)
+            save_path=(save_dir_wet_lab_plots / f"{variant_short}_{experiment}_dBCM.png"),
+            title=f"{variant} dBCM",)
 
 
 

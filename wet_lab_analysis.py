@@ -981,8 +981,15 @@ def load_supr_dsf_export(csv_file: str | Path,
 
     csv_file = Path(csv_file)
 
-    with open(csv_file, "r", encoding="utf-8", errors="ignore",) as f:
-        rows = [line.rstrip("\n").split(",") for line in f]
+    with open(csv_file, "r", encoding="utf-8", errors="ignore") as f:
+        lines = [line.rstrip("\n") for line in f]
+
+    # suddenly the delimiter of the csv changed from the first to the second export
+    delimiter = ";"
+    if lines and lines[0].count(",") > lines[0].count(";"):
+        delimiter = ","
+
+    rows = [line.split(delimiter) for line in lines]
 
     max_cols = max(len(row) for row in rows)
     rows = [row + [""] * (max_cols - len(row)) for row in rows]
