@@ -894,6 +894,9 @@ if wet_lab_analysis_bool:
         ("mCloverV13", "V13", "20260730_mCloverV1-12-13_Export_30_07_2026"),
         ("PBS", "PBS", "20260812_mCloverV14_Export_12_08_2026"),
         ("mCloverV14", "V14", "20260812_mCloverV14_Export_12_08_2026"),
+        ("PBS", "PBS", "20260813_mCloverV14_Export_13_08_2026"),
+        ("mCloverV14 (0.1 mg/ml)", "V14 - 0.1", "20260813_mCloverV14_Export_13_08_2026"),
+        ("mCloverV14 (0.652 mg/ml)", "V14 - 0.652", "20260813_mCloverV14_Export_13_08_2026"),
     ]
 
     for variant, variant_short, experiment in experiments:
