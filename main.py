@@ -92,6 +92,8 @@ from wet_lab_analysis import (
     plot_bli_phase_runs,
     load_all_supr_dsf_exports,
     plot_supr_dsf)
+from figure_creation import (
+    create_composite_figure,)
 
 
 # ---------------Switches-----------------------
@@ -105,6 +107,7 @@ structure_prediction_analysis_bool = False # does not work if old pdb files are 
 MD_prep_bool = False
 MD_analysis_bool = False
 wet_lab_analysis_bool = True
+figure_creation_bool = False
 
 # ---------------Configuration-----------------------
 # choose sequences for structure prediction plddt comparison plots
@@ -159,6 +162,7 @@ if run_all_bool:
     structure_prediction_analysis_bool = True
     MD_prep_bool = True
     MD_analysis_bool = True
+    figure_creation_bool= True
 
 print("--------------------Import--------------------")
 start_time_main = time.time()
@@ -911,6 +915,22 @@ if wet_lab_analysis_bool:
             show_values=True,
             save_path=(save_dir_wet_lab_plots / f"{variant_short}_{experiment}_dBCM.png"),
             title=f"{variant} dBCM",)
+
+
+if figure_creation_bool:
+    print("\n--------------------Figure Creation--------------------")
+
+    create_composite_figure(
+        output_file= (save_dir_dry_lab_plots / "Figure_1.png"),
+        images={
+            "A": save_dir_dry_lab_plots / "x.png",
+            "B": save_dir_dry_lab_plots / "y.png",
+            "C": save_dir_dry_lab_plots / "z.png",},
+        layout="""
+        AA
+        BC
+        """,)
+
 
 
 
