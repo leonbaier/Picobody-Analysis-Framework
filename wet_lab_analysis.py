@@ -52,6 +52,7 @@ def create_fab_reports(sequence_file: str | Path, output_dir: str | Path,
         (
             r"VARIANT:\s*([A-Za-z0-9_-]+)\s+"
             r"SEQUENCE:\s*([A-Z*]+)\s+"
+            r"INSERT:\s*([A-Z]+)\s+"
             r"SIGNAL_PEPTIDE:\s*([A-Z]+)"
         ),
         text,
@@ -64,6 +65,7 @@ def create_fab_reports(sequence_file: str | Path, output_dir: str | Path,
     for (
         variant_name,
         hc_sequence,
+        insert_sequence,
         hc_signal_peptide,
     ) in variants:
 
@@ -105,6 +107,10 @@ def create_fab_reports(sequence_file: str | Path, output_dir: str | Path,
         fab_abs_red = (fab_eps_red / fab_mw)
         fab_abs_ox = (fab_eps_ox / fab_mw)
 
+        def get_residue_positions(sequence: str, residue: str,
+        ) -> list:
+            return[i + 1 for i, aa in enumerate(sequence) if aa == residue]
+
         result = {
 
             "HC": {
@@ -128,6 +134,15 @@ def create_fab_reports(sequence_file: str | Path, output_dir: str | Path,
                     hc_sequence.count("Y"),
                 "Cys":
                     hc_sequence.count("C"),
+                "W_Positions":
+                    get_residue_positions(hc_sequence, "W"),
+
+                "Y_Positions":
+                    get_residue_positions(hc_sequence, "Y"),
+
+                "SUPR_DSF_Residues":
+                    hc_sequence.count("W")
+                    + hc_sequence.count("Y"),
             },
 
             "LC": {
@@ -151,6 +166,15 @@ def create_fab_reports(sequence_file: str | Path, output_dir: str | Path,
                     lc_sequence.count("Y"),
                 "Cys":
                     lc_sequence.count("C"),
+                "W_Positions":
+                    get_residue_positions(lc_sequence, "W"),
+
+                "Y_Positions":
+                    get_residue_positions(lc_sequence, "Y"),
+
+                "SUPR_DSF_Residues":
+                    lc_sequence.count("W")
+                    + lc_sequence.count("Y"),
             },
 
             "Fab": {
@@ -174,7 +198,35 @@ def create_fab_reports(sequence_file: str | Path, output_dir: str | Path,
                     fab_sequence.count("Y"),
                 "Cys":
                     fab_sequence.count("C"),
+                "W_Positions":
+                    get_residue_positions(fab_sequence, "W"),
+
+                "Y_Positions":
+                    get_residue_positions(fab_sequence, "Y"),
+
+                "SUPR_DSF_Residues":
+                    fab_sequence.count("W")
+                    + fab_sequence.count("Y"),
             },
+            "Insert": {
+                "Length_aa":
+                    len(insert_sequence),
+
+                "Trp":
+                    insert_sequence.count("W"),
+
+                "Tyr":
+                    insert_sequence.count("Y"),
+
+                "W_Positions":
+                    get_residue_positions(insert_sequence, "W",),
+
+                "Y_Positions":
+                    get_residue_positions(insert_sequence, "Y",),
+
+                "SUPR_DSF_Residues":
+                    insert_sequence.count("W") + insert_sequence.count("Y"),
+            }
         }
 
         results[variant_name] = result
@@ -231,6 +283,39 @@ Abs 0.1% reduced [-]: {result["Fab"]["Abs0.1_Reduced"]:.3f}
 Number of tryptophans [-]: {result["Fab"]["Trp"]}
 Number of tyrosines [-]: {result["Fab"]["Tyr"]}
 Number of cysteines [-]: {result["Fab"]["Cys"]}
+
+
+
+SUPR-DSF Relevant Residues
+--------------------------
+
+Insert
+------
+Length [-]: {result["Insert"]["Length_aa"]}
+
+Trp [-]: {result["Insert"]["Trp"]}
+Tyr [-]: {result["Insert"]["Tyr"]}
+Total fluorescent residues [-]: {result["Insert"]["SUPR_DSF_Residues"]}
+
+Trp positions:
+{result["Insert"]["W_Positions"]}
+
+Tyr positions:
+{result["Insert"]["Y_Positions"]}
+
+
+Fab Fragment (HC + LC)
+----------------------
+
+Trp [-]: {result["Fab"]["Trp"]}
+Tyr [-]: {result["Fab"]["Tyr"]}
+Total fluorescent residues [-]: {result["Fab"]["SUPR_DSF_Residues"]}
+
+Trp positions:
+{result["Fab"]["W_Positions"]}
+
+Tyr positions:
+{result["Fab"]["Y_Positions"]}
 """.strip()
 
         (output_dir / f"{variant_name}.txt").write_text(report, encoding="utf-8",)
