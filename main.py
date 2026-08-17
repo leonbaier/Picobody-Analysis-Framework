@@ -91,6 +91,7 @@ from wet_lab_analysis import (
     plot_bli_runs,
     plot_bli_phase_runs,
     load_all_supr_dsf_exports,
+    harmonize_supr_dsf_temperatures,
     plot_supr_dsf)
 from figure_creation import (
     create_composite_figure,)
@@ -885,7 +886,10 @@ if wet_lab_analysis_bool:
 
 
     # plot SUPR-DSF runs
-    supr_dsf_data = load_all_supr_dsf_exports(save_dir_wetlab_supr_dsf)
+    supr_dsf_data_raw = load_all_supr_dsf_exports(save_dir_wetlab_supr_dsf)
+    supr_dsf_data = harmonize_supr_dsf_temperatures(
+        supr_dsf_data=supr_dsf_data_raw,
+        reference_experiment="20260730_mCloverV1-12-13_Export_30_07_2026")
 
     experiments = [
         ("PBS", "PBS", "20260730_mCloverV1-12-13_Export_30_07_2026"),

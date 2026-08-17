@@ -1131,6 +1131,52 @@ def load_all_supr_dsf_exports(save_dir: str | Path,
     return all_data
 
 
+def harmonize_supr_dsf_temperatures(supr_dsf_data: dict, reference_experiment: str, temperature_column: str = "Temperature",
+) -> dict:
+    """
+    Reduces all experiments to the temperature grid of a reference experiment.
+
+    For each temperature in the reference experiment, the closest
+    temperature in the target experiment is selected.
+    """
+
+    reference_data = supr_dsf_data[reference_experiment]
+
+    first_sample = next(iter(reference_data.values()))
+
+    reference_temperatures = (
+        first_sample[temperature_column]
+        .to_numpy()
+    )
+
+    harmonized = {}
+
+    for experiment_name, experiment_data in supr_dsf_data.items():
+
+        harmonized[experiment_name] = {}
+
+        for sample_name, df in experiment_data.items():
+
+            temperatures = df[temperature_column].to_numpy()
+
+            indices = []
+
+            for ref_temp in reference_temperatures:
+
+                idx = np.argmin(
+                    np.abs(temperatures - ref_temp)
+                )
+
+                indices.append(idx)
+
+            harmonized[experiment_name][sample_name] = (
+                df.iloc[indices]
+                .reset_index(drop=True)
+            )
+
+    return harmonized
+
+
 def calculate_tonset_dbcm(fit_x: np.ndarray, fit_y: np.ndarray, peak_fraction: float = 0.05,
 ) -> float:
 
@@ -1201,10 +1247,14 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
             for key in sample_keys])
 
         y = np.mean(y_stack, axis=0,)
-        peak_indices, _ = find_peaks( y, prominence=np.std(y) * 0.5,)
+
+        peak_indices, _ = find_peaks(y, prominence=np.std(y) * 0.5,)
         peak_indices = peak_indices[np.argsort(y[peak_indices])[::-1]]
 
-        n_transitions = min(len(peak_indices), 2,)
+        # remove pseudo peaks below the baseline
+        peak_indices = peak_indices[y[peak_indices] > 0]
+
+        n_transitions = min(len(peak_indices), 2)
 
         if n_transitions == 0:
             peak = np.argmax(y)
