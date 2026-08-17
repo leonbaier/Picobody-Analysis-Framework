@@ -8,6 +8,7 @@ from pypdf import PdfReader
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
+from io import StringIO
 
 
 def create_fab_reports(sequence_file: str | Path, output_dir: str | Path,
@@ -1396,3 +1397,214 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
         plt.show()
 
     plt.close()
+
+
+def load_sec_mals_data(
+        save_dir_wet_lab_sec_mals: str | Path,
+) -> dict:
+    """
+    Load and organize SEC-MALS experiment data.
+
+    Returns
+    -------
+    dict
+        Nested dictionary with the following structure:
+
+        {
+            "easi_graph": pd.DataFrame,
+            "easi_table": pd.DataFrame,
+
+            "reports": {
+                sample_name: Path,
+            },
+
+            "samples": {
+                sample_name: {
+                    "basic_collection": pd.DataFrame,
+                    "mass_vs_volume": pd.DataFrame,
+                }
+            }
+        }
+
+        Content
+    -------
+    easi_graph:
+        Combined EASI graph export containing UV, dRI and
+        Rayleigh ratio traces for all samples.
+
+    easi_table:
+        EASI summary table containing Mn, Mw, Mw/Mn,
+        injected mass and mass recovery.
+
+    reports:
+        Dictionary mapping sample names to Wyatt summary
+        report PDF files.
+
+    samples[sample]["basic_collection"]:
+        Raw detector channels exported from the SEC-MALS run
+        (LS, UV, dRI, flow rate, pressure, etc.).
+
+    samples[sample]["mass_vs_volume"]:
+        Molar mass profile extracted from the Wyatt export.
+
+        Columns:
+            time_min
+            molar_mass_g_mol
+
+    """
+
+
+    root = Path(save_dir_wet_lab_sec_mals)
+
+    data = {
+        "easi_graph": None,
+        "easi_table": None,
+        "reports": {},
+        "samples": {},
+    }
+
+    # ----------------------------
+    # Global exports
+    # ----------------------------
+
+    graph_file = root / "EASI_graph_SEC-MALS.csv"
+    table_file = root / "EASI_table_SEC-MALS.csv"
+
+    if graph_file.exists():
+
+        data["easi_graph"] = pd.read_csv(
+            graph_file,
+            sep=None,
+            engine="python",)
+
+    if table_file.exists():
+        data["easi_table"] = pd.read_csv(
+            table_file,
+            header=[0, 1],
+            sep=None,
+            engine="python",)
+
+    # ----------------------------
+    # Name mapping
+    # ----------------------------
+
+    sample_mapping = {
+        "BSA002": "BSA",
+        "PBS001": "PBS",
+        "mC_V14": "V14",
+        "mC_V13": "V13",
+        "mC_V12": "V12",
+        "mC_V1": "V1",
+    }
+
+    # ----------------------------
+    # Reports
+    # ----------------------------
+
+    for file in root.glob("*Report (Summary).pdf"):
+        sample = None
+
+        for raw_name, clean_name in sample_mapping.items():
+            if raw_name in file.stem:
+                sample = clean_name
+                break
+
+        if sample is None:
+            continue
+
+        data["reports"][sample] = file
+
+    # ----------------------------
+    # Basic collection files
+    # ----------------------------
+
+    for file in root.glob("*Basic-Collection_SEC-MALS.csv"):
+        sample = None
+
+        for raw_name, clean_name in sample_mapping.items():
+            if raw_name in file.stem:
+                sample = clean_name
+                break
+
+        if sample is None:
+            continue
+
+        data["samples"].setdefault(sample, {})
+        data["samples"][sample][
+            "basic_collection"
+        ] = pd.read_csv(
+            file,
+            sep=None,
+            engine="python",
+        )
+
+    # ----------------------------
+    # Automated exports
+    # ----------------------------
+
+    export_dir = root / "20260810_export_all_SEC-MALS"
+
+    if export_dir.exists():
+        export_types = {
+            "masses vs volume": "mass_vs_volume",
+        }
+
+        for file in export_dir.glob("*.csv"):
+            sample = None
+
+            for raw_name, clean_name in sample_mapping.items():
+                if raw_name in file.stem:
+                    sample = clean_name
+                    break
+
+            if sample is None:
+                continue
+
+            data["samples"].setdefault(sample, {})
+
+            for export_string, export_name in export_types.items():
+                if export_string in file.stem:
+                    try:
+                        if file.stat().st_size == 0:
+                            print(f"Skipping empty file: {file.name}")
+                            continue
+                        if export_name == "mass_vs_volume":
+                            with open(file, "r", encoding="utf-8", errors="ignore") as f:
+                                lines = f.readlines()
+                            start_idx = None
+
+                            for i, line in enumerate(lines):
+                                if "Molar Mass" in line:
+                                    start_idx = i + 2
+                                    break
+
+                            if start_idx is None:
+                                raise ValueError(f"No molar mass section found in {file.name}")
+
+                            df = pd.read_csv(StringIO("".join(lines[start_idx:])),)
+                            df.columns = ["time_min", "molar_mass_g_mol",]
+                        else:
+                            df = pd.read_csv(
+                                file,
+                                sep=None,
+                                engine="python",)
+                        if df.empty:
+                            print(f"Skipping empty file: {file.name}")
+                            continue
+                    except Exception as e:
+                        print(f"Could not load {file.name}: {e}")
+                        continue
+                    data["samples"][sample][export_name] = df
+
+                    break
+
+    # ----------------------------
+    # Summary
+    # ----------------------------
+
+    print("\nLoaded SEC-MALS data:")
+
+    for sample, sample_data in data["samples"].items():
+        print(f"{sample}: {list(sample_data.keys())}")
+
+    return data

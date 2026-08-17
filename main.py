@@ -92,7 +92,8 @@ from wet_lab_analysis import (
     plot_bli_phase_runs,
     load_all_supr_dsf_exports,
     harmonize_supr_dsf_temperatures,
-    plot_supr_dsf)
+    plot_supr_dsf,
+    load_sec_mals_data)
 from figure_creation import (
     create_composite_figure,)
 
@@ -150,6 +151,7 @@ save_dir_wetlab_affinity = Path(save_dir_wetlab / "affinity_chromatography")
 save_dir_wetlab_sec = Path(save_dir_wetlab / "SEC_chromatography")
 save_dir_wetlab_bli = Path(save_dir_wetlab / "BLI")
 save_dir_wetlab_supr_dsf = Path(save_dir_wetlab / "SUPR-DSF")
+save_dir_wetlab_sec_mals = Path(save_dir_wetlab / "SEC_MALS")
 
 
 save_dir_variable_data.mkdir(exist_ok=True)
@@ -163,6 +165,7 @@ if run_all_bool:
     structure_prediction_analysis_bool = True
     MD_prep_bool = True
     MD_analysis_bool = True
+    wet_lab_analysis_bool = True
     figure_creation_bool= True
 
 print("--------------------Import--------------------")
@@ -922,6 +925,15 @@ if wet_lab_analysis_bool:
             show_values=True,
             save_path=(save_dir_wet_lab_plots / f"{variant_short}_{experiment}_dBCM.png"),
             title=f"{variant} dBCM",)
+
+
+
+    # plot SEC-MALS data
+    sec_mals_data = load_sec_mals_data(save_dir_wetlab_sec_mals)
+
+
+
+
 
 
 if figure_creation_bool:
