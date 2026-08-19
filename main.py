@@ -94,7 +94,9 @@ from wet_lab_analysis import (
     harmonize_supr_dsf_temperatures,
     plot_supr_dsf,
     load_sec_mals_data,
-    plot_sec_mals_uv_mw,)
+    plot_sec_mals_uv_mw,
+    load_theoretical_fab_mw,
+    plot_mw_comparison,)
 from figure_creation import (
     create_composite_figure,)
 
@@ -122,6 +124,12 @@ comparison_variant_seq = []
 
 # choose for which of the sequences above MDs are prepared (choose from "comparison", "tested", "both")
 md_selection_mode = "comparison"
+
+ms_mw = {
+        "V1": 1.0,
+        "V12": 1.0,
+        "V13": 1.0,
+        "V14": 1.0,}
 
 
 # ---------------Paths--------------------------
@@ -691,6 +699,7 @@ if MD_analysis_bool:
 
 if wet_lab_analysis_bool:
     print("\n--------------------wet lab Analysis--------------------")
+    """
 
     # calculate light and heavy chain parameter
     fab_data = create_fab_reports(
@@ -927,6 +936,7 @@ if wet_lab_analysis_bool:
             save_path=(save_dir_wet_lab_plots / f"{variant_short}_{experiment}_dBCM.png"),
             title=f"{variant} dBCM",)
 
+    """
 
     # plot SEC-MALS data
     sec_mals_data = load_sec_mals_data(save_dir_wetlab_sec_mals)
@@ -937,28 +947,39 @@ if wet_lab_analysis_bool:
         show_uv=True,
         show_mw=False,
         save_path=save_dir_wet_lab_plots / "SEC_MALS_UV.png", )
-    plot_sec_mals_uv_mw(
+    sec_mals_mw = plot_sec_mals_uv_mw(
         sec_mals_data=sec_mals_data,
         samples=["V1", "V12", "V13", "V14", "BSA"],
         show_uv=False,
         show_mw=True,
         save_path=save_dir_wet_lab_plots / "SEC_MALS_MW.png", )
+    theoretical_mw = load_theoretical_fab_mw(save_dir_variable_data)
+    plot_mw_comparison(
+        sec_mals_mw=sec_mals_mw,
+        theoretical_mw=theoretical_mw,
+        ms_mw=ms_mw,
+        save_path=save_dir_wet_lab_plots / "MW_comparison.png",
+        title="Comparison of Calculated, MS and SEC-MALS Molecular Weights",)
 
 
 
-if figure_creation_bool:
-    print("\n--------------------Figure Creation--------------------")
 
-    create_composite_figure(
-        output_file= (save_dir_dry_lab_plots / "Figure_1.png"),
-        images={
-            "A": save_dir_dry_lab_plots / "x.png",
-            "B": save_dir_dry_lab_plots / "y.png",
-            "C": save_dir_dry_lab_plots / "z.png",},
-        layout="""
-        AA
-        BC
-        """,)
+
+
+
+    if figure_creation_bool:
+        print("\n--------------------Figure Creation--------------------")
+
+        create_composite_figure(
+            output_file= (save_dir_dry_lab_plots / "Figure_1.png"),
+            images={
+                "A": save_dir_dry_lab_plots / "x.png",
+                "B": save_dir_dry_lab_plots / "y.png",
+                "C": save_dir_dry_lab_plots / "z.png",},
+            layout="""
+            AA
+            BC
+            """,)
 
 
 

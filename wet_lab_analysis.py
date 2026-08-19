@@ -1714,6 +1714,7 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
     # --------------------------------------------------
     # MALS molecular weights
     # --------------------------------------------------
+    mw_summary = {}
 
     if show_mw:
 
@@ -1753,11 +1754,14 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
                     linewidth=2,
                     alpha=0.9,)
 
-                if not show_uv:
-                    time_seg = time.iloc[segment]
-                    mass_seg = mass.iloc[segment]
+                time_seg = time.iloc[segment]
+                mass_seg = mass.iloc[segment]
+                mw_mean = mass_seg.mean()
 
-                    mw_mean = mass_seg.mean()
+                if sample != "BSA":
+                    mw_summary[sample] = mw_mean
+
+                if not show_uv:
 
                     center_idx = len(time_seg) // 2
                     x_center = time_seg.iloc[center_idx]
@@ -1833,6 +1837,91 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
             dpi=300,
             bbox_inches="tight",)
 
+        print(f"Plot written to: {save_path}")
+    else:
+        plt.show()
+
+    plt.close()
+    return mw_summary
+
+
+def load_theoretical_fab_mw(report_dir: str | Path,
+) -> dict[str, float]:
+    mws = {}
+
+    for file in Path(report_dir).glob("*.txt"):
+        text = file.read_text(encoding="utf-8")
+        match = re.search(
+            r"Fab Fragment.*?Molecular weight\s+([0-9.]+)",
+            text,
+            re.DOTALL,)
+        if match:
+            mws[file.stem] = float(match.group(1)) / 1000
+    return mws
+
+
+def plot_mw_comparison(sec_mals_mw: dict[str, float], theoretical_mw: dict[str, float], ms_mw: dict[str, float] | None = None,
+                       save_path=None, title: str | None = None,
+):
+
+    variants = ["V1", "V12", "V13", "V14"]
+
+    x = np.arange(len(variants))
+    width = 0.25
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    calc_values = [theoretical_mw.get(v, np.nan) for v in variants]
+    sec_values = [sec_mals_mw.get(v, np.nan) for v in variants]
+
+    if ms_mw is not None:
+        ms_values = [ms_mw.get(v, np.nan) for v in variants]
+
+        ax.bar(
+            x - width,
+            calc_values,
+            width,
+            label="Calculated MW",)
+        ax.bar(
+            x,
+            ms_values,
+            width,
+            label="MS MW",)
+        ax.bar(
+            x + width,
+            sec_values,
+            width,
+            label="SEC-MALS MW",)
+    else:
+
+        ax.bar(
+            x - width / 2,
+            calc_values,
+            width,
+            label="Calculated MW",)
+        ax.bar(
+            x + width / 2,
+            sec_values,
+            width,
+            label="SEC-MALS MW",)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(variants)
+
+    ax.set_ylabel("Molecular Weight (kDa)")
+
+    if title is None:
+        ax.set_title("Comparison of Molecular Weights")
+    else:
+        ax.set_title(title)
+
+    ax.legend()
+    ax.grid(axis="y", alpha=0.3)
+
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path,dpi=300, bbox_inches="tight",)
         print(f"Plot written to: {save_path}")
     else:
         plt.show()
