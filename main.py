@@ -93,7 +93,8 @@ from wet_lab_analysis import (
     load_all_supr_dsf_exports,
     harmonize_supr_dsf_temperatures,
     plot_supr_dsf,
-    load_sec_mals_data)
+    load_sec_mals_data,
+    plot_sec_mals_uv_chromatograms)
 from figure_creation import (
     create_composite_figure,)
 
@@ -927,9 +928,14 @@ if wet_lab_analysis_bool:
             title=f"{variant} dBCM",)
 
 
-
     # plot SEC-MALS data
     sec_mals_data = load_sec_mals_data(save_dir_wetlab_sec_mals)
+
+    plot_sec_mals_uv_chromatograms(
+        sec_mals_data=sec_mals_data,
+        samples=["V1", "V12", "V13", "V14", "BSA"],
+        save_path=save_dir_wet_lab_plots / "SEC_MALS_UV_overlay.png",
+        title="SEC-MALS UV Chromatograms")
 
 
 

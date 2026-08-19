@@ -1490,7 +1490,9 @@ def load_sec_mals_data(
 
     sample_mapping = {
         "BSA002": "BSA",
+        "mC_BSA": "BSA",
         "PBS001": "PBS",
+        "mC_PBS": "PBS",
         "mC_V14": "V14",
         "mC_V13": "V13",
         "mC_V12": "V12",
@@ -1510,6 +1512,7 @@ def load_sec_mals_data(
                 break
 
         if sample is None:
+            print(f"No sample mapping found for: {file.name}")
             continue
 
         data["reports"][sample] = file
@@ -1608,3 +1611,117 @@ def load_sec_mals_data(
         print(f"{sample}: {list(sample_data.keys())}")
 
     return data
+
+
+def plot_sec_mals_uv_chromatograms(
+        sec_mals_data: dict,
+        samples: list[str] | None = None,
+        save_path=None,
+        title: str | None = None,
+):
+    """
+    Plot SEC-MALS UV chromatograms from the EASI graph export.
+
+    Parameters
+    ----------
+    sec_mals_data : dict
+        Output from load_sec_mals_data()
+
+    samples : list[str] | None
+        Samples to plot.
+        Examples:
+            ["V1", "V12", "V13", "V14"]
+
+    save_path : Path | str | None
+        Output location.
+
+    title : str | None
+        Custom plot title.
+    """
+
+    df = sec_mals_data["easi_graph"]
+
+    if df is None:
+        raise ValueError("No EASI graph data found.")
+
+    if samples is None:
+        samples = ["V1", "V12", "V13", "V14"]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    colors = {
+        "V1": "tab:blue",
+        "V12": "tab:orange",
+        "V13": "tab:green",
+        "V14": "tab:red",
+        "BSA": "tab:purple",
+        "PBS": "grey",
+    }
+
+    time_column = "time (min)"
+
+    for sample in samples:
+
+        uv_column = None
+
+        for column in df.columns:
+
+            col = str(column)
+
+            if "(UV)" not in col:
+                continue
+
+            if sample == "BSA" and "BSA" in col:
+                uv_column = column
+                break
+
+            elif sample == "PBS" and "PBS" in col:
+                uv_column = column
+                break
+
+            elif f"mC_{sample}" in col:
+                uv_column = column
+                break
+
+        if uv_column is None:
+            print(f"Skipping {sample}: no UV column found")
+            continue
+
+        valid = df[[time_column, uv_column]].dropna()
+
+        ax.plot(
+            valid[time_column],
+            valid[uv_column],
+            linewidth=2,
+            color=colors.get(sample, None),
+            label=sample,
+        )
+
+    ax.set_xlabel("Time (min)")
+    ax.set_xlim(0, 30)
+    ax.set_ylabel("UV Absorbance (AU)")
+
+    if title is not None:
+        ax.set_title(title)
+    else:
+        ax.set_title("SEC-MALS UV Chromatograms")
+
+    ax.legend()
+    ax.grid(alpha=0.3)
+
+    plt.tight_layout()
+
+    if save_path is not None:
+
+        plt.savefig(
+            save_path,
+            dpi=300,
+            bbox_inches="tight",
+        )
+
+        print(f"Plot written to: {save_path}")
+
+    else:
+        plt.show()
+
+    plt.close()
