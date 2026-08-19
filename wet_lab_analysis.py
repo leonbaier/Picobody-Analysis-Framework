@@ -1615,11 +1615,11 @@ def load_sec_mals_data(save_dir_wet_lab_sec_mals: str | Path,
     return data
 
 
-def plot_sec_mals_uv_chromatograms(sec_mals_data: dict, samples: list[str] | None = None, save_path=None,
-                                   title: str | None = None,
+def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, show_uv: bool = True, show_mw: bool = True,
+                  save_path=None, title: str | None = None,
 ):
     """
-    Plot SEC-MALS UV chromatograms from the EASI graph export.
+    Plot SEC-MALS chromatograms and/or MALS mass profiles.
 
     Parameters
     ----------
@@ -1628,25 +1628,22 @@ def plot_sec_mals_uv_chromatograms(sec_mals_data: dict, samples: list[str] | Non
 
     samples : list[str] | None
         Samples to plot.
-        Examples:
-            ["V1", "V12", "V13", "V14"]
+
+    show_uv : bool
+        Plot UV chromatograms.
+
+    show_mw : bool
+        Plot molecular weight profiles.
 
     save_path : Path | str | None
         Output location.
 
     title : str | None
-        Custom plot title.
+        Plot title.
     """
 
-    df = sec_mals_data["easi_graph"]
-
-    if df is None:
-        raise ValueError("No EASI graph data found.")
-
-    if samples is None:
-        samples = ["V1", "V12", "V13", "V14"]
-
-    fig, ax = plt.subplots(figsize=(8, 5))
+    if not show_uv and not show_mw:
+        raise ValueError("At least one of show_uv or show_mw must be True.")
 
     colors = {
         "V1": "tab:blue",
@@ -1657,159 +1654,143 @@ def plot_sec_mals_uv_chromatograms(sec_mals_data: dict, samples: list[str] | Non
         "PBS": "grey",
     }
 
-    time_column = "time (min)"
+    fig, ax_uv = plt.subplots(figsize=(9, 5))
+    ax_mw = None
 
-    for sample in samples:
+    if show_mw and show_uv:
+        ax_mw = ax_uv.twinx()
+    elif show_mw:
+        ax_mw = ax_uv
 
-        uv_column = None
+    # --------------------------------------------------
+    # UV chromatograms
+    # --------------------------------------------------
 
-        for column in df.columns:
+    if show_uv:
 
-            col = str(column)
+        easi_graph = sec_mals_data["easi_graph"]
 
-            if "(UV)" not in col:
+        if easi_graph is None:
+            raise ValueError("No EASI graph data available.")
+
+        time_column = "time (min)"
+
+        for sample in samples:
+            uv_column = None
+
+            for column in easi_graph.columns:
+                col = str(column)
+
+                if "(UV)" not in col:
+                    continue
+
+                if sample == "BSA" and "BSA" in col:
+                    uv_column = column
+                    break
+                elif sample == "PBS" and "PBS" in col:
+                    uv_column = column
+                    break
+                elif f"mC_{sample}" in col:
+                    uv_column = column
+                    break
+
+            if uv_column is None:
+                print(f"Skipping {sample}: no UV column found")
                 continue
 
-            if sample == "BSA" and "BSA" in col:
-                uv_column = column
-                break
+            valid = (easi_graph[[time_column, uv_column]].dropna())
 
-            elif sample == "PBS" and "PBS" in col:
-                uv_column = column
-                break
+            ax_uv.plot(
+                valid[time_column],
+                valid[uv_column],
+                color=colors.get(sample),
+                linewidth=2,
+                linestyle="-",
+                label=sample,)
 
-            elif f"mC_{sample}" in col:
-                uv_column = column
-                break
+        ax_uv.set_ylabel("UV Absorbance (AU)")
 
-        if uv_column is None:
-            print(f"Skipping {sample}: no UV column found")
-            continue
+    # --------------------------------------------------
+    # MALS molecular weights
+    # --------------------------------------------------
 
-        valid = df[[time_column, uv_column]].dropna()
+    if show_mw:
 
-        ax.plot(
-            valid[time_column],
-            valid[uv_column],
-            linewidth=2,
-            color=colors.get(sample, None),
-            label=sample,
-        )
+        for sample in samples:
 
-    ax.set_xlabel("Time (min)")
-    ax.set_xlim(0, 30)
-    ax.set_ylabel("UV Absorbance (AU)")
+            if sample not in sec_mals_data["samples"]:
+                print(f"Skipping {sample}: sample not found")
+                continue
+
+            sample_data = sec_mals_data["samples"][sample]
+
+            if "mass_vs_volume" not in sample_data:
+                print(f"Skipping {sample}: no mass_vs_volume export")
+                continue
+
+            df = sample_data["mass_vs_volume"].copy()
+
+            df["time_min"] = pd.to_numeric(df["time_min"], errors="coerce",)
+            df["molar_mass_g_mol"] = pd.to_numeric(df["molar_mass_g_mol"], errors="coerce",)
+
+            df = df.dropna()
+
+            time = df["time_min"]
+            mass = df["molar_mass_g_mol"] / 1000
+
+            # handle BSA multi-region export
+            breaks = np.where(np.diff(time) < 0)[0]
+
+            segments = np.split(np.arange(len(time)), breaks + 1)
+
+            for segment in segments:
+                ax_mw.plot(
+                    time.iloc[segment],
+                    mass.iloc[segment],
+                    color="grey" if show_uv else colors.get(sample),
+                    linestyle="--" if show_uv else "-",
+                    linewidth=2,
+                    alpha=0.9,)
+
+        ax_mw.set_ylabel("Molecular Weight (kDa)")
+
+    # --------------------------------------------------
+    # Layout
+    # --------------------------------------------------
+
+    ax_uv.set_xlabel("Time (min)")
+    ax_uv.set_xlim(10, 30)
 
     if title is not None:
-        ax.set_title(title)
+        ax_uv.set_title(title)
     else:
-        ax.set_title("SEC-MALS UV Chromatograms")
 
-    ax.legend()
-    ax.grid(alpha=0.3)
+        if show_uv and show_mw:
+            ax_uv.set_title("SEC-MALS Chromatograms and Molecular Weight Profiles")
+        elif show_uv:
+            ax_uv.set_title("SEC-MALS UV Chromatograms")
+        else:
+            ax_uv.set_title("SEC-MALS Molecular Weight Profiles")
 
+    handles = [
+        plt.Line2D(
+            [0],
+            [0],
+            color=colors[sample],
+            linewidth=2,
+            label=sample,)
+        for sample in samples]
+
+    ax_uv.legend(handles=handles, loc="best",)
+    ax_uv.grid(alpha=0.3)
     plt.tight_layout()
 
     if save_path is not None:
-
         plt.savefig(
             save_path,
             dpi=300,
-            bbox_inches="tight",
-        )
+            bbox_inches="tight",)
 
-        print(f"Plot written to: {save_path}")
-
-    else:
-        plt.show()
-
-    plt.close()
-
-
-def plot_sec_mals_mass_profiles(sec_mals_data: dict, samples: list[str] | None = None, save_path=None,
-                                title: str | None = None,
-):
-    """
-    Plot SEC-MALS molecular weight profiles.
-
-    Parameters
-    ----------
-    sec_mals_data : dict
-        Output of load_sec_mals_data()
-
-    samples : list[str] | None
-        Samples to plot.
-
-    save_path : Path | str | None
-        Output file.
-
-    title : str | None
-        Plot title.
-    """
-
-    if samples is None:
-        samples = ["V1", "V12", "V13", "V14"]
-
-    fig, ax = plt.subplots(figsize=(8, 5))
-
-    colors = {
-        "V1": "tab:blue",
-        "V12": "tab:orange",
-        "V13": "tab:green",
-        "V14": "tab:red",
-        "BSA": "tab:purple",
-        "PBS": "grey",}
-
-    for sample in samples:
-
-        if sample not in sec_mals_data["samples"]:
-            print(f"Skipping {sample}: sample not found")
-            continue
-
-        sample_data = sec_mals_data["samples"][sample]
-
-        if "mass_vs_volume" not in sample_data:
-            print(f"Skipping {sample}: no mass_vs_volume export")
-            continue
-
-        df = sample_data["mass_vs_volume"]
-
-        if sample == "BSA":
-            breaks = np.where(np.diff(df["time_min"]) < 0)[0]
-            segments = np.split(np.arange(len(df["time_min"])), breaks + 1)
-
-            for i, segment in enumerate(segments):
-                ax.plot(
-                    df["time_min"].iloc[segment],
-                    df["molar_mass_g_mol"].iloc[segment] / 1000,
-                    color=colors[sample],
-                    linewidth=2,
-                    label=sample if i == 0 else None,)
-        else:
-            ax.plot(
-                df["time_min"],
-                df["molar_mass_g_mol"] / 1000,
-                linewidth=2,
-                color=colors.get(sample),
-                label=sample,)
-
-    bsa = sec_mals_data["samples"]["BSA"]["mass_vs_volume"]
-
-    ax.set_xlabel("Time (min)")
-    ax.set_ylabel("Molecular Weight (kDa)")
-
-    if title:
-        ax.set_title(title)
-    else:
-        ax.set_title("SEC-MALS Molecular Weight Profiles")
-
-    ax.legend()
-    ax.grid(alpha=0.3)
-
-    plt.tight_layout()
-
-    if save_path is not None:
-        plt.savefig(save_path,dpi=300, bbox_inches="tight",)
         print(f"Plot written to: {save_path}")
     else:
         plt.show()
