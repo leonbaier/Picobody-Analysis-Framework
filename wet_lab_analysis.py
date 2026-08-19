@@ -1927,3 +1927,86 @@ def plot_mw_comparison(sec_mals_mw: dict[str, float], theoretical_mw: dict[str, 
         plt.show()
 
     plt.close()
+
+
+def export_sec_mals_summary_table(sec_mals_data: dict, save_dir_variable_data,
+) -> pd.DataFrame:
+    """
+    Export SEC-MALS summary table for thesis use.
+
+    Extracts:
+        - Mn
+        - Mw
+        - Mw uncertainty
+        - Mn uncertainty
+        - Polydispersity (Mw/Mn)
+        - Mass recovery
+
+    for V1, V12, V13 and V14.
+
+    Outputs:
+        - terminal print
+        - CSV
+        - LaTeX table
+    """
+
+    df = sec_mals_data["easi_table"].copy()
+
+    sample_col = ('\ufeff', 'Unnamed: 0_level_1')
+    mn_col = ('Peak 1', 'Mn (kDa)')
+    mn_unc_col = ('Unnamed: 2_level_0', 'Uncertainty')
+
+    mw_col = ('Unnamed: 3_level_0', 'Mw (kDa)')
+    mw_unc_col = ('Unnamed: 4_level_0', 'Uncertainty')
+
+    pdi_col = ('Unnamed: 5_level_0', 'Polydispersity (Mw/Mn)')
+
+    recovery_col = ('Unnamed: 10_level_0', 'Mass recovery (%)')
+
+    rows = {}
+
+    for _, row in df.iterrows():
+        sample_name = str(row[sample_col])
+
+        if "mC_V14" in sample_name:
+            sample = "V14"
+        elif "mC_V13" in sample_name:
+            sample = "V13"
+        elif "mC_V12" in sample_name:
+            sample = "V12"
+        elif "mC_V1" in sample_name:
+            sample = "V1"
+        else:
+            continue
+
+        rows[sample] = {
+
+            "Mn (kDa)": pd.to_numeric(row[mn_col], errors="coerce",),
+            "Mn uncertainty (kDa)": pd.to_numeric(row[mn_unc_col], errors="coerce",),
+            "Mw (kDa)": pd.to_numeric(row[mw_col], errors="coerce",),
+            "Mw uncertainty (kDa)": pd.to_numeric(row[mw_unc_col], errors="coerce",),
+            "Mw/Mn": pd.to_numeric(row[pdi_col], errors="coerce",),
+            "Mass recovery (%)": pd.to_numeric(row[recovery_col], errors="coerce",),
+        }
+
+    summary = (pd.DataFrame(rows).T.round(2))
+
+    print("\nSEC-MALS Summary")
+    print(summary)
+
+    csv_path = (Path(save_dir_variable_data) / "SEC_MALS_summary.csv")
+    summary.to_csv(csv_path)
+    latex_path = (Path(save_dir_variable_data) / "SEC_MALS_summary.tex")
+
+    with open(latex_path, "w", encoding="utf-8") as f:
+        f.write(
+            summary.to_latex(
+                float_format="%.2f",
+                caption="SEC-MALS characterization of Fab variants.",
+                label="tab:sec_mals_summary",)
+        )
+
+    print(f"Table written to: {csv_path}")
+    print(f"LaTeX written to: {latex_path}")
+
+    return summary

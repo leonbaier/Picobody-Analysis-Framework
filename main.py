@@ -96,7 +96,8 @@ from wet_lab_analysis import (
     load_sec_mals_data,
     plot_sec_mals_uv_mw,
     load_theoretical_fab_mw,
-    plot_mw_comparison,)
+    plot_mw_comparison,
+    export_sec_mals_summary_table)
 from figure_creation import (
     create_composite_figure,)
 
@@ -699,7 +700,6 @@ if MD_analysis_bool:
 
 if wet_lab_analysis_bool:
     print("\n--------------------wet lab Analysis--------------------")
-    """
 
     # calculate light and heavy chain parameter
     fab_data = create_fab_reports(
@@ -936,7 +936,6 @@ if wet_lab_analysis_bool:
             save_path=(save_dir_wet_lab_plots / f"{variant_short}_{experiment}_dBCM.png"),
             title=f"{variant} dBCM",)
 
-    """
 
     # plot SEC-MALS data
     sec_mals_data = load_sec_mals_data(save_dir_wetlab_sec_mals)
@@ -960,6 +959,9 @@ if wet_lab_analysis_bool:
         ms_mw=ms_mw,
         save_path=save_dir_wet_lab_plots / "MW_comparison.png",
         title="Comparison of Calculated, MS and SEC-MALS Molecular Weights",)
+    sec_mals_summary = export_sec_mals_summary_table(
+        sec_mals_data=sec_mals_data,
+        save_dir_variable_data=save_dir_variable_data,)
 
 
 
