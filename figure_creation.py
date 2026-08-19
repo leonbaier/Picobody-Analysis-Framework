@@ -3,8 +3,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 
-def create_composite_figure(images: dict[str, Path], layout: str, output_file: Path, panel_label_size: int = 80,
-        figure_width_px: int = 2400,
+def create_composite_figure(images: dict[str, Path], layout: str, output_file: Path, panel_label_size: int = 60,
+                            figure_width_px: int = 2400, cell_aspect_ratio: float = 0.70, panel_padding: int = 40,
 ):
     """
     Create a composite figure from existing image files.
@@ -23,7 +23,8 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
     '''
     """
 
-    layout_rows = [row.strip()
+    layout_rows = [
+        row.strip()
         for row in layout.strip().splitlines()
         if row.strip()
     ]
@@ -36,10 +37,9 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
             raise ValueError("All layout rows must have equal length.")
 
     cell_width = figure_width_px // n_cols
-    cell_height = cell_width
+    cell_height = int(cell_width * cell_aspect_ratio)
     figure_height = cell_height * n_rows
-
-    final_image = Image.new("RGB", (figure_width_px, figure_height),"white",)
+    final_image = Image.new("RGB", (figure_width_px, figure_height), "white",)
 
     try:
         font = ImageFont.truetype("arialbd.ttf", panel_label_size,)
@@ -50,7 +50,6 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
     labels = sorted(set("".join(layout_rows)))
 
     for label in labels:
-
         if label not in images:
             raise KeyError(f"No image provided for panel '{label}'.")
 
@@ -58,7 +57,6 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
 
         for row_idx, row in enumerate(layout_rows):
             for col_idx, value in enumerate(row):
-
                 if value == label:
                     positions.append((row_idx, col_idx))
 
@@ -76,12 +74,14 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
 
         panel_width = ((max_col - min_col + 1) * cell_width)
         panel_height = ((max_row - min_row + 1) * cell_height)
+        img = (Image.open(images[label]).convert("RGB"))
 
-        img = Image.open(images[label]).convert("RGB")
+        available_width = (panel_width - 2 * panel_padding)
+        available_height = (panel_height - 2 * panel_padding)
 
         scale = min(
-            panel_width / img.width,
-            panel_height / img.height,)
+            available_width / img.width,
+            available_height / img.height,)
 
         new_width = int(img.width * scale)
         new_height = int(img.height * scale)
@@ -93,14 +93,10 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
         final_image.paste(img, (paste_x, paste_y),)
 
         draw.text(
-            (
-                panel_x + 20,
-                panel_y + 20,
-            ),
+            (panel_x + 10, panel_y + 10,),
             label,
             fill="black",
-            font=font,
-        )
+            font=font,)
 
     output_file.parent.mkdir(parents=True, exist_ok=True,)
     final_image.save(output_file)

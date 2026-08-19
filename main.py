@@ -112,8 +112,8 @@ structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
-wet_lab_analysis_bool = True
-figure_creation_bool = False
+wet_lab_analysis_bool = False
+figure_creation_bool = True
 
 # ---------------Configuration-----------------------
 # choose sequences for structure prediction plddt comparison plots
@@ -151,6 +151,7 @@ save_dir_wet_lab_plots = Path(save_dir_data / "wet_lab_plots")
 save_dir_variable_data = Path(save_dir_data / "variable_data_etc")
 save_dir_structure_prediction = Path(save_dir_data / "structure_prediction")
 save_dir_wetlab = Path(save_dir_data / "wet_lab_results")
+save_dir_thesis_figures = Path(save_dir_data / "thesis_figures")
 save_dir_maestro = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_Picobodies\Maestro_Pred_Strc_Picobodies")
 
 save_dir_esm = Path(save_dir_structure_prediction / "esm_fold")
@@ -162,6 +163,15 @@ save_dir_wetlab_sec = Path(save_dir_wetlab / "SEC_chromatography")
 save_dir_wetlab_bli = Path(save_dir_wetlab / "BLI")
 save_dir_wetlab_supr_dsf = Path(save_dir_wetlab / "SUPR-DSF")
 save_dir_wetlab_sec_mals = Path(save_dir_wetlab / "SEC_MALS")
+
+# ---------------Plot Paths--------------------------
+name_unique_global_alignment = "unique_global_alignment"
+path_plot_length_distribution = (save_dir_dry_lab_plots / "unique_global_length_vs_sequence.png")
+path_plot_occurrence_distribution = (save_dir_dry_lab_plots / "unique_global_sequence_occurrence.png")
+path_plot_gap_distribution = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_gap_distribution.png")
+path_plot_entropy_distribution = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_entropy_distribution.png")
+path_plot_sequence_logo_no_gaps = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_logo_no_gaps.png")
+path_plot_sequence_logo_with_gaps = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_logo_with_gaps.png")
 
 
 save_dir_variable_data.mkdir(exist_ok=True)
@@ -218,22 +228,20 @@ print(f"Number of potential binders (candidates): {len(candidate_sequences)}")
 # ---------------general sequence analysis--------------------------
 if general_sequence_analysis_bool:
     print("\n--------------------General Sequence analysis--------------------")
-    plot_length_distribution(unique_global, save_dir_dry_lab_plots)
-    plot_occurrence_distribution(unique_global, save_dir_dry_lab_plots)
-    print("Plots for length distribution and occurrence distribution were saved.")
-
     alignment_path = run_clustalw_alignment_from_fasta(
         fasta_files=[(save_dir_variable_data /"unique_global.fasta")],
         clustalw_path=clustalw_path,
         output_dir=save_dir_variable_data,
-        output_prefix="unique_global_alignment")
+        output_prefix=name_unique_global_alignment)
 
-    plot_gap_distribution(alignment_path, save_dir_dry_lab_plots)
-    plot_entropy_distribution(alignment_path, save_dir_dry_lab_plots)
-    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=False, plot_title="Logo of Global Unique Sequences")
-    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=True, plot_title="Logo of Global Unique Sequences (with gaps)")
-    print(f"Plots for {alignment_path} with the gap distribution, the entropy distribution and the logos (with and without gaps) were saved.")
-
+    plot_length_distribution(unique_global, save_path=path_plot_length_distribution)
+    plot_occurrence_distribution(unique_global, save_path=path_plot_occurrence_distribution)
+    plot_gap_distribution(alignment_path, save_path=path_plot_gap_distribution)
+    plot_entropy_distribution(alignment_path, save_path=path_plot_entropy_distribution)
+    plot_sequence_logo(alignment_path, include_gaps=False, plot_title="Logo of Global Unique Sequences",
+                       save_path=path_plot_sequence_logo_no_gaps)
+    plot_sequence_logo(alignment_path, include_gaps=True, plot_title="Logo of Global Unique Sequences (with gaps)",
+                       save_path=path_plot_sequence_logo_with_gaps)
 
 # ---------------cystein sequence analysis--------------------------
 if cysteine_sequence_analysis_bool:
@@ -965,23 +973,26 @@ if wet_lab_analysis_bool:
 
 
 
-
-
-
-
-    if figure_creation_bool:
-        print("\n--------------------Figure Creation--------------------")
-
-        create_composite_figure(
-            output_file= (save_dir_dry_lab_plots / "Figure_1.png"),
-            images={
-                "A": save_dir_dry_lab_plots / "x.png",
-                "B": save_dir_dry_lab_plots / "y.png",
-                "C": save_dir_dry_lab_plots / "z.png",},
-            layout="""
-            AA
-            BC
-            """,)
+if figure_creation_bool:
+    print("\n--------------------Figure Creation--------------------")
+    create_composite_figure(
+        output_file= (save_dir_thesis_figures / "Figure_1.png"),
+        images={
+            "A": path_plot_length_distribution,
+            "B": path_plot_occurrence_distribution,
+            "C": path_plot_gap_distribution,
+            "D": path_plot_entropy_distribution,
+            "E": path_plot_sequence_logo_with_gaps,
+        },
+        layout=
+        """
+        ABC
+        DEE
+        """,
+        panel_label_size=60,
+        figure_width_px = 2400,
+        cell_aspect_ratio = 0.70,
+        panel_padding=40)
 
 
 

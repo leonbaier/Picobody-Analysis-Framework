@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import numpy as np
 import logomaker
 from Bio import AlignIO
 
@@ -9,7 +8,7 @@ from collections import Counter
 import time
 
 
-def plot_length_distribution(unique_global: dict, save_dir: Path = None, filename: str = "unique_global_length_vs_sequence.png"
+def plot_length_distribution(unique_global: dict, save_path: Path = None,
 ) -> None:
     """
     Plot length distribution of globally unique sequences.
@@ -24,14 +23,15 @@ def plot_length_distribution(unique_global: dict, save_dir: Path = None, filenam
     plt.title("Length distribution of globally unique sequences")
     plt.tight_layout()
 
-    if save_dir is not None:
-        plt.savefig(save_dir / filename, dpi=300)
+    if save_path is not None:
+        plt.savefig(save_path,dpi=300, bbox_inches="tight",)
+        print(f"Plot written to: {save_path}")
     else:
         plt.show()
     plt.close()
 
 
-def plot_occurrence_distribution(unique_global: dict, save_dir: Path = None, filename: str = "unique_global_sequence_occurrence.png",
+def plot_occurrence_distribution(unique_global: dict, save_path: Path = None,
 ) -> None:
     """
     Plot a histogram of sequence lengths weighted by their occurrence.
@@ -58,8 +58,9 @@ def plot_occurrence_distribution(unique_global: dict, save_dir: Path = None, fil
     plt.title("Occurrence of different sequence lengths")
     plt.tight_layout()
 
-    if save_dir is not None:
-        plt.savefig(save_dir / filename, dpi=300)
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight", )
+        print(f"Plot written to: {save_path}")
     else:
         plt.show()
 
@@ -129,16 +130,13 @@ def run_clustalw_alignment_from_fasta(fasta_files: list[Path], clustalw_path: st
     return final_aln
 
 
-def plot_gap_distribution(aln_path: Path, save_dir: Path = None, filename: str | None = None, plot_title: str | None = None
+def plot_gap_distribution(aln_path: Path, save_path: Path = None, plot_title: str | None = None
 ) -> None:
     """
     Plot gap fraction per alignment position.
     At each position: number of gaps divided by number of sequences.
     Long regions with low gap fraction and sharp peaks indicate good conservation.
     """
-
-    if filename is None:
-        filename = f"{aln_path.stem}_gap_distribution.png"
 
     alignment = AlignIO.read(aln_path, "clustal")
     n_seqs = len(alignment)
@@ -161,15 +159,16 @@ def plot_gap_distribution(aln_path: Path, save_dir: Path = None, filename: str |
     plt.ylim(0, 1)
     plt.tight_layout()
 
-    if save_dir is not None:
-        plt.savefig(save_dir / filename, dpi=300)
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300)
+        print(f"Plot written to: {save_path}")
     else:
         plt.show()
 
     plt.close()
 
 
-def plot_entropy_distribution(aln_path: Path, save_dir: Path = None, filename: str | None = None, plot_title: str | None = None
+def plot_entropy_distribution(aln_path: Path, save_path: Path = None, plot_title: str | None = None
 ) -> None:
     """
     Plot Shannon entropy per alignment position.
@@ -177,11 +176,7 @@ def plot_entropy_distribution(aln_path: Path, save_dir: Path = None, filename: s
     Lower value points to higher conservation.
     """
 
-    if filename is None:
-        filename = f"{aln_path.stem}_entropy_distribution.png"
-
     alignment = AlignIO.read(aln_path, "clustal")
-    n_seqs = len(alignment)
     aln_len = alignment.get_alignment_length()
 
     entropies = []
@@ -212,24 +207,19 @@ def plot_entropy_distribution(aln_path: Path, save_dir: Path = None, filename: s
         plt.title(plot_title)
     plt.tight_layout()
 
-    if save_dir is not None:
-        plt.savefig(save_dir / filename, dpi=300)
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300,)
+        print(f"Plot written to: {save_path}")
     else:
         plt.show()
     plt.close()
 
 
-def plot_sequence_logo(aln_path: Path, save_dir: Path = None, filename: str | None = None, plot_title: str | None = None, include_gaps: bool = False
+def plot_sequence_logo(aln_path: Path, save_path: Path = None, plot_title: str | None = None, include_gaps: bool = False
 ) -> None:
     """
     Generate a sequence logo from a ClustalW alignment.
     """
-
-    if filename is None:
-        if include_gaps:
-            filename = f"{aln_path.stem}_logo_with_gaps.png"
-        else:
-            filename = f"{aln_path.stem}_logo_no_gaps.png"
 
     alignment = AlignIO.read(aln_path, "clustal")
     logo_sequences = []
@@ -253,10 +243,7 @@ def plot_sequence_logo(aln_path: Path, save_dir: Path = None, filename: str | No
         color_scheme="chemistry")
 
     if include_gaps and "-" in freq.columns:
-        logo.style_glyphs(
-            glyphs="-",
-            color="lightgray"
-        )
+        logo.style_glyphs(glyphs="-", color="lightgray")
 
     plt.xlabel("Alignment position")
     plt.ylabel("Residue frequency")
@@ -266,8 +253,9 @@ def plot_sequence_logo(aln_path: Path, save_dir: Path = None, filename: str | No
         plt.title(plot_title)
 
     plt.tight_layout()
-    if save_dir is not None:
-        plt.savefig(save_dir / filename, dpi=300)
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300,)
+        print(f"Plot written to: {save_path}")
     else:
         plt.show()
     plt.close()
