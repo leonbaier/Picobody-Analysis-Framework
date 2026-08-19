@@ -94,7 +94,8 @@ from wet_lab_analysis import (
     harmonize_supr_dsf_temperatures,
     plot_supr_dsf,
     load_sec_mals_data,
-    plot_sec_mals_uv_chromatograms)
+    plot_sec_mals_uv_chromatograms,
+    plot_sec_mals_mass_profiles)
 from figure_creation import (
     create_composite_figure,)
 
@@ -936,8 +937,11 @@ if wet_lab_analysis_bool:
         samples=["V1", "V12", "V13", "V14", "BSA"],
         save_path=save_dir_wet_lab_plots / "SEC_MALS_UV_overlay.png",
         title="SEC-MALS UV Chromatograms")
-
-
+    plot_sec_mals_mass_profiles(
+        sec_mals_data=sec_mals_data,
+        samples=["V1", "V12", "V13", "V14", "BSA"],
+        save_path=save_dir_wet_lab_plots / "SEC_MALS_mass_profile_overlay.png",
+        title="SEC-MALS Molecular Weight Profiles")
 
 
 

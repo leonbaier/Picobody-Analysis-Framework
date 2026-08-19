@@ -1399,8 +1399,7 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
     plt.close()
 
 
-def load_sec_mals_data(
-        save_dir_wet_lab_sec_mals: str | Path,
+def load_sec_mals_data(save_dir_wet_lab_sec_mals: str | Path,
 ) -> dict:
     """
     Load and organize SEC-MALS experiment data.
@@ -1548,9 +1547,7 @@ def load_sec_mals_data(
     export_dir = root / "20260810_export_all_SEC-MALS"
 
     if export_dir.exists():
-        export_types = {
-            "masses vs volume": "mass_vs_volume",
-        }
+        export_types = {"masses vs volume": "mass_vs_volume",}
 
         for file in export_dir.glob("*.csv"):
             sample = None
@@ -1586,6 +1583,11 @@ def load_sec_mals_data(
 
                             df = pd.read_csv(StringIO("".join(lines[start_idx:])),)
                             df.columns = ["time_min", "molar_mass_g_mol",]
+
+                            df["time_min"] = pd.to_numeric(df["time_min"], errors="coerce")
+                            df["molar_mass_g_mol"] = pd.to_numeric(df["molar_mass_g_mol"], errors="coerce")
+
+                            df = df.dropna()
                         else:
                             df = pd.read_csv(
                                 file,
@@ -1613,11 +1615,8 @@ def load_sec_mals_data(
     return data
 
 
-def plot_sec_mals_uv_chromatograms(
-        sec_mals_data: dict,
-        samples: list[str] | None = None,
-        save_path=None,
-        title: str | None = None,
+def plot_sec_mals_uv_chromatograms(sec_mals_data: dict, samples: list[str] | None = None, save_path=None,
+                                   title: str | None = None,
 ):
     """
     Plot SEC-MALS UV chromatograms from the EASI graph export.
@@ -1721,6 +1720,97 @@ def plot_sec_mals_uv_chromatograms(
 
         print(f"Plot written to: {save_path}")
 
+    else:
+        plt.show()
+
+    plt.close()
+
+
+def plot_sec_mals_mass_profiles(sec_mals_data: dict, samples: list[str] | None = None, save_path=None,
+                                title: str | None = None,
+):
+    """
+    Plot SEC-MALS molecular weight profiles.
+
+    Parameters
+    ----------
+    sec_mals_data : dict
+        Output of load_sec_mals_data()
+
+    samples : list[str] | None
+        Samples to plot.
+
+    save_path : Path | str | None
+        Output file.
+
+    title : str | None
+        Plot title.
+    """
+
+    if samples is None:
+        samples = ["V1", "V12", "V13", "V14"]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    colors = {
+        "V1": "tab:blue",
+        "V12": "tab:orange",
+        "V13": "tab:green",
+        "V14": "tab:red",
+        "BSA": "tab:purple",
+        "PBS": "grey",}
+
+    for sample in samples:
+
+        if sample not in sec_mals_data["samples"]:
+            print(f"Skipping {sample}: sample not found")
+            continue
+
+        sample_data = sec_mals_data["samples"][sample]
+
+        if "mass_vs_volume" not in sample_data:
+            print(f"Skipping {sample}: no mass_vs_volume export")
+            continue
+
+        df = sample_data["mass_vs_volume"]
+
+        if sample == "BSA":
+            breaks = np.where(np.diff(df["time_min"]) < 0)[0]
+            segments = np.split(np.arange(len(df["time_min"])), breaks + 1)
+
+            for i, segment in enumerate(segments):
+                ax.plot(
+                    df["time_min"].iloc[segment],
+                    df["molar_mass_g_mol"].iloc[segment] / 1000,
+                    color=colors[sample],
+                    linewidth=2,
+                    label=sample if i == 0 else None,)
+        else:
+            ax.plot(
+                df["time_min"],
+                df["molar_mass_g_mol"] / 1000,
+                linewidth=2,
+                color=colors.get(sample),
+                label=sample,)
+
+    bsa = sec_mals_data["samples"]["BSA"]["mass_vs_volume"]
+
+    ax.set_xlabel("Time (min)")
+    ax.set_ylabel("Molecular Weight (kDa)")
+
+    if title:
+        ax.set_title(title)
+    else:
+        ax.set_title("SEC-MALS Molecular Weight Profiles")
+
+    ax.legend()
+    ax.grid(alpha=0.3)
+
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path,dpi=300, bbox_inches="tight",)
+        print(f"Plot written to: {save_path}")
     else:
         plt.show()
 
