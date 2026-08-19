@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 from pypdf import PdfReader
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
@@ -1743,7 +1744,7 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
 
             segments = np.split(np.arange(len(time)), breaks + 1)
 
-            for segment in segments:
+            for seg_idx, segment in enumerate(segments):
                 ax_mw.plot(
                     time.iloc[segment],
                     mass.iloc[segment],
@@ -1751,6 +1752,46 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
                     linestyle="--" if show_uv else "-",
                     linewidth=2,
                     alpha=0.9,)
+
+                if not show_uv:
+                    time_seg = time.iloc[segment]
+                    mass_seg = mass.iloc[segment]
+
+                    mw_mean = mass_seg.mean()
+
+                    center_idx = len(time_seg) // 2
+                    x_center = time_seg.iloc[center_idx]
+                    y_center = mass_seg.iloc[center_idx]
+
+                    ax_mw.scatter(
+                        x_center,
+                        y_center,
+                        color="red",
+                        s=10,
+                        zorder=10,)
+
+                    if sample == "BSA":
+                        bsa_offsets = [
+                            (1, 4),  # small Peak
+                            (5, -7),  # big Peak
+                        ]
+                        dx, dy = bsa_offsets[min(seg_idx, 1)]
+
+                    else:
+                        offsets = {
+                            "V1": (1, 4),
+                            "V12": (1, 4),
+                            "V13": (1, 4),
+                            "V14": (-43, 4),}
+                        dx, dy = offsets.get(sample, (1, 3))
+
+
+                    ax_mw.annotate(
+                        f"{mw_mean:.1f} kDa",
+                        (x_center, y_center),
+                        xytext=(dx, dy),
+                        textcoords="offset points",
+                        fontsize=9,)
 
         ax_mw.set_ylabel("Molecular Weight (kDa)")
 
@@ -1760,6 +1801,7 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
 
     ax_uv.set_xlabel("Time (min)")
     ax_uv.set_xlim(10, 30)
+    ax_uv.xaxis.set_major_locator(MultipleLocator(5))
 
     if title is not None:
         ax_uv.set_title(title)
@@ -1770,7 +1812,7 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
         elif show_uv:
             ax_uv.set_title("SEC-MALS UV Chromatograms")
         else:
-            ax_uv.set_title("SEC-MALS Molecular Weight Profiles")
+            ax_uv.set_title("SEC-MALS Molecular Weight Profiles with the calculated mean MW")
 
     handles = [
         plt.Line2D(
