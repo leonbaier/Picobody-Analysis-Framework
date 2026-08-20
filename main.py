@@ -173,7 +173,7 @@ path_plot_entropy_distribution = (save_dir_dry_lab_plots / f"{name_unique_global
 path_plot_sequence_logo_no_gaps = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_logo_no_gaps.png")
 path_plot_sequence_logo_with_gaps = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_logo_with_gaps.png")
 
-
+# ---------------Initializing--------------------------
 save_dir_variable_data.mkdir(exist_ok=True)
 save_dir_dry_lab_plots.mkdir(exist_ok=True)
 save_dir_wet_lab_plots.mkdir(exist_ok=True)
@@ -976,23 +976,24 @@ if wet_lab_analysis_bool:
 if figure_creation_bool:
     print("\n--------------------Figure Creation--------------------")
     create_composite_figure(
-        output_file= (save_dir_thesis_figures / "Figure_1.png"),
+        output_file=(save_dir_thesis_figures / "Figure_1.png"),
         images={
             "A": path_plot_length_distribution,
             "B": path_plot_occurrence_distribution,
             "C": path_plot_gap_distribution,
             "D": path_plot_entropy_distribution,
-            "E": path_plot_sequence_logo_with_gaps,
-        },
+            "E": path_plot_sequence_logo_with_gaps,},
         layout=
         """
-        ABC
-        DEE
+        AB
+        CD
+        EE
         """,
-        panel_label_size=60,
-        figure_width_px = 2400,
-        cell_aspect_ratio = 0.70,
-        panel_padding=40)
+        figure_width_px=3000,
+        panel_label_size=50,
+        row_spacing=0,
+        col_spacing=25,)
+
 
 
 

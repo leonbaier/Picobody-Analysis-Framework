@@ -3,31 +3,58 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 
-def create_composite_figure(images: dict[str, Path], layout: str, output_file: Path, panel_label_size: int = 60,
-                            figure_width_px: int = 2400, cell_aspect_ratio: float = 0.70, panel_padding: int = 40,
+def create_composite_figure(images: dict[str, Path], layout: str, output_file: Path, figure_width_px: int = 3000,
+                            row_spacing: int = 20, col_spacing: int = 25, panel_label_size: int = 50, panel_label_offset: int = 25
 ):
     """
     Create a composite figure from existing image files.
 
+    Each unique character in the layout corresponds to one panel.
+
     Example
     -------
     images = {
-        "A": Path("schema.png"),
-        "B": Path("rmsd.png"),
-        "C": Path("rmsf.png"),
+        "A": Path("plot_a.png"),
+        "B": Path("plot_b.png"),
+        "C": Path("plot_c.png"),
+        "D": Path("plot_d.png"),
+        "E": Path("plot_e.png"),
     }
 
     layout = '''
-    AA
-    BC
+    AB
+    CD
+    EE
     '''
+
+    Parameters
+    ----------
+    images : dict[str, Path]
+        Mapping between panel labels and image files.
+
+    layout : str
+        Panel arrangement.
+
+    output_file : Path
+        Output image path.
+
+    figure_width_px : int, default=3000
+        Width of final figure.
+
+    row_spacing : int, default=20
+        Vertical spacing between rows.
+
+    col_spacing : int, default=25
+        Horizontal spacing between columns.
+
+    panel_label_size : int, default=50
+        Font size of panel labels.
+
+    panel_label_offset: int, default=25
+        Offset of panel labels.
     """
 
-    layout_rows = [
-        row.strip()
-        for row in layout.strip().splitlines()
-        if row.strip()
-    ]
+    layout_rows = [row.strip() for row in layout.strip().splitlines() if row.strip()]
 
     n_rows = len(layout_rows)
     n_cols = len(layout_rows[0])
@@ -36,29 +63,33 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
         if len(row) != n_cols:
             raise ValueError("All layout rows must have equal length.")
 
-    cell_width = figure_width_px // n_cols
-    cell_height = int(cell_width * cell_aspect_ratio)
-    figure_height = cell_height * n_rows
-    final_image = Image.new("RGB", (figure_width_px, figure_height), "white",)
+    cell_width = (figure_width_px - col_spacing * (n_cols - 1)) // n_cols
 
     try:
         font = ImageFont.truetype("arialbd.ttf", panel_label_size,)
     except Exception:
         font = ImageFont.load_default()
 
-    draw = ImageDraw.Draw(final_image)
+    # --------------------------------------------------
+    # determine panel geometry
+    # --------------------------------------------------
+
+    panels = {}
     labels = sorted(set("".join(layout_rows)))
+    row_heights = [0] * n_rows
 
     for label in labels:
         if label not in images:
             raise KeyError(f"No image provided for panel '{label}'.")
 
+        img = (Image.open(images[label]).convert("RGB"))
+
         positions = []
 
-        for row_idx, row in enumerate(layout_rows):
-            for col_idx, value in enumerate(row):
+        for r, row in enumerate(layout_rows):
+            for c, value in enumerate(row):
                 if value == label:
-                    positions.append((row_idx, col_idx))
+                    positions.append((r, c))
 
         rows = [r for r, _ in positions]
         cols = [c for _, c in positions]
@@ -69,31 +100,56 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
         min_col = min(cols)
         max_col = max(cols)
 
-        panel_x = min_col * cell_width
-        panel_y = min_row * cell_height
+        span_cols = max_col - min_col + 1
 
-        panel_width = ((max_col - min_col + 1) * cell_width)
-        panel_height = ((max_row - min_row + 1) * cell_height)
-        img = (Image.open(images[label]).convert("RGB"))
+        panel_width = (span_cols * cell_width + (span_cols - 1) * col_spacing)
 
-        available_width = (panel_width - 2 * panel_padding)
-        available_height = (panel_height - 2 * panel_padding)
+        scale = panel_width / img.width
+        scaled_width = int(img.width * scale)
+        scaled_height = int(img.height * scale)
 
-        scale = min(
-            available_width / img.width,
-            available_height / img.height,)
+        img = img.resize((scaled_width, scaled_height), Image.LANCZOS,)
 
-        new_width = int(img.width * scale)
-        new_height = int(img.height * scale)
+        panels[label] = {
+            "image": img,
+            "row": min_row,
+            "col": min_col,
+            "width": scaled_width,
+            "height": scaled_height,}
 
-        img = img.resize((new_width, new_height), Image.LANCZOS,)
+        row_heights[min_row] = max(row_heights[min_row], scaled_height,)
 
-        paste_x = (panel_x + (panel_width - new_width) // 2)
-        paste_y = (panel_y + (panel_height - new_height) // 2)
-        final_image.paste(img, (paste_x, paste_y),)
+    figure_height = (sum(row_heights) + row_spacing * (n_rows - 1))
+
+    final_image = Image.new(
+        "RGB",
+        (figure_width_px, figure_height),
+        "white",)
+
+    draw = ImageDraw.Draw(final_image)
+
+    row_offsets = []
+    current_y = 0
+
+    for h in row_heights:
+        row_offsets.append(current_y)
+        current_y += h + row_spacing
+
+    # --------------------------------------------------
+    # place images
+    # --------------------------------------------------
+
+    for label, panel in panels.items():
+        panel_x = (panel["col"] * (cell_width + col_spacing))
+        panel_y = row_offsets[panel["row"]]
+
+        final_image.paste(panel["image"], (panel_x, panel_y),)
+
+        label_x = panel_x + 5
+        label_y = max( 5, panel_y - panel_label_offset,)
 
         draw.text(
-            (panel_x + 10, panel_y + 10,),
+            (label_x, label_y),
             label,
             fill="black",
             font=font,)
