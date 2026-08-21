@@ -106,14 +106,14 @@ from figure_creation import (
 run_all_bool = False
 DEBUG = False
 
-general_sequence_analysis_bool = False
+general_sequence_analysis_bool = True
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
 wet_lab_analysis_bool = False
-figure_creation_bool = True
+figure_creation_bool = False
 
 # ---------------Configuration-----------------------
 # choose sequences for structure prediction plddt comparison plots
@@ -193,6 +193,8 @@ start_time_main = time.time()
 picobody_sequences = load_fasta_sequences(FASTA_PATH_SOURCE)
 negative_binder_sequences = load_negative_binders(EXCEL_PATH_SOURCE)
 
+save_negative_binders(negative_binder_sequences, save_dir_variable_data)
+
 
 # ---------------Preprocessing--------------------------
 print("\n--------------------Preprocessing--------------------")
@@ -207,8 +209,10 @@ neg_check = check_negative_occurrence(
     raw_sequences,
     unique_global,
     negative_binder_sequences)
+print("Negative binders in raw data:", len(neg_check["neg_in_raw"]))
+print("Negative binders in global unique:", len(neg_check["neg_in_global"]))
+print("Negative binders NOT in global unique:", len(neg_check["neg_not_in_global"]))
 
-save_negative_binders(negative_binder_sequences, save_dir_variable_data)
 save_unique_per_cow(unique_per_cow, save_dir_variable_data)
 save_unique_global_csv(unique_global, save_dir_variable_data)
 unique_global_fasta = save_unique_global_fasta(unique_global, save_dir_variable_data)
@@ -218,24 +222,21 @@ seq_to_id = build_seq_to_id_map(unique_global_fasta)
 negative_binder_ids = extract_negative_binder_ids_from_fasta(unique_global_fasta,negative_binder_sequences=negative_binder_sequences)
 candidate_sequences = build_candidate_set(unique_global, negative_binder_ids, seq_to_id)
 save_candidates(candidate_sequences, save_dir_variable_data, seq_to_id)
-
-print("Negative binders in raw data:", len(neg_check["neg_in_raw"]))
-print("Negative binders in global unique:", len(neg_check["neg_in_global"]))
-print("Negative binders NOT in global unique:", len(neg_check["neg_not_in_global"]))
 print(f"Number of potential binders (candidates): {len(candidate_sequences)}")
 
 
 # ---------------general sequence analysis--------------------------
 if general_sequence_analysis_bool:
     print("\n--------------------General Sequence analysis--------------------")
+    plot_length_distribution(unique_global, save_path=path_plot_length_distribution)
+    plot_occurrence_distribution(unique_global, save_path=path_plot_occurrence_distribution)
+
     alignment_path = run_clustalw_alignment_from_fasta(
         fasta_files=[(save_dir_variable_data /"unique_global.fasta")],
         clustalw_path=clustalw_path,
         output_dir=save_dir_variable_data,
         output_prefix=name_unique_global_alignment)
 
-    plot_length_distribution(unique_global, save_path=path_plot_length_distribution)
-    plot_occurrence_distribution(unique_global, save_path=path_plot_occurrence_distribution)
     plot_gap_distribution(alignment_path, save_path=path_plot_gap_distribution)
     plot_entropy_distribution(alignment_path, save_path=path_plot_entropy_distribution)
     plot_sequence_logo(alignment_path, include_gaps=False, plot_title="Logo of Global Unique Sequences",

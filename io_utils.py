@@ -66,6 +66,19 @@ def save_unique_global_csv(unique_picobody_sequences_global: Dict[str, Dict], sa
     df.to_csv(save_dir / "unique_sequences.csv", index=False)
 
 
+def save_unique_global_fasta(unique_global: dict, save_dir: Path) -> Path:
+    """
+    Save globally unique sequences as FASTA for downstream tools.
+    """
+    fasta_path = save_dir / "unique_global.fasta"
+
+    with open(fasta_path, "w") as f:
+        for i, seq in enumerate(unique_global.keys(), start=1):
+            f.write(f">seq_{i}\n{seq}\n")
+
+    return fasta_path
+
+
 def save_raw_sequences(raw_sequences: List[Dict], save_dir: Path
 ) -> None:
     """
@@ -78,6 +91,20 @@ def save_raw_sequences(raw_sequences: List[Dict], save_dir: Path
 
 
 def build_seq_to_id_map(fasta_path: Path) -> dict:
+    """
+    Create a dictionary mapping each sequence in a FASTA file
+    to its corresponding sequence identifier.
+
+    Parameters
+    ----------
+    fasta_path : Path
+        Path to the FASTA file.
+
+    Returns
+    -------
+    dict
+        Dictionary with sequences as keys and FASTA IDs as values.
+    """
     return {str(r.seq): r.id for r in SeqIO.parse(fasta_path, "fasta")}
 
 
@@ -105,19 +132,6 @@ def save_candidates(candidate_sequences: Dict[str, Dict], save_dir: Path, seq_to
             seq_id = seq_to_id[seq]
             fh.write(f">{seq_id}\n")
             fh.write(seq + "\n")
-
-
-def save_unique_global_fasta(unique_global: dict, save_dir: Path) -> Path:
-    """
-    Save globally unique sequences as FASTA for downstream tools.
-    """
-    fasta_path = save_dir / "unique_global.fasta"
-
-    with open(fasta_path, "w") as f:
-        for i, seq in enumerate(unique_global.keys(), start=1):
-            f.write(f">seq_{i}\n{seq}\n")
-
-    return fasta_path
 
 
 def save_clusters(clusters, path: Path):

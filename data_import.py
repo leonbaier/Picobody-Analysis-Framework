@@ -73,6 +73,7 @@ def load_negative_binders(excel_path: Path) -> dict:
                 "first_found_in": first_found
             }
 
-    print(f"Negative-Binder import completed successfully with {len(negative_binder_sequences)} sequences")
+    print(f"Negative-Binder import completed successfully with {len(negative_binder_sequences)} sequences. "
+          f"Sequence 25 was against the old status not tested, so {len(negative_binder_sequences) - 1} negative binders.")
 
     return negative_binder_sequences

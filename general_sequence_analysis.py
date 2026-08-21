@@ -50,8 +50,7 @@ def plot_occurrence_distribution(unique_global: dict, save_path: Path = None,
         bins=30,
         weights=weights,
         edgecolor="black",
-        alpha=0.8,
-    )
+        alpha=0.8,)
 
     plt.xlabel("Sequence length (aa)")
     plt.ylabel("Occurrence (number of observations)")
