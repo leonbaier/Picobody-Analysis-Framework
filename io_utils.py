@@ -1,8 +1,10 @@
-from pathlib import Path
-import pandas as pd
-from typing import Dict, List
-from Bio import SeqIO
 import pickle
+from pathlib import Path
+from typing import Dict, List
+
+import pandas as pd
+from Bio import SeqIO
+import matplotlib.pyplot as plt
 
 
 def save_negative_binders(negative_binder_sequences: Dict[str, Dict], save_dir: Path
@@ -132,6 +134,58 @@ def save_candidates(candidate_sequences: Dict[str, Dict], save_dir: Path, seq_to
             seq_id = seq_to_id[seq]
             fh.write(f">{seq_id}\n")
             fh.write(seq + "\n")
+
+
+def set_publication_style(size: str = "standard", figsize: tuple[float, float] = (6, 4),
+):
+    """
+    Apply a consistent plotting style for thesis figures.
+    """
+
+    if size == "small":
+        title_size = 6
+        axis_label_size = 5
+        tick_size = 4
+        legend_size = 4
+    elif size == "standard":
+        title_size = 14
+        axis_label_size = 12
+        tick_size = 11
+        legend_size = 10
+    elif size == "large":
+        title_size = 22
+        axis_label_size = 20
+        tick_size = 16
+        legend_size = 10
+    else:
+        raise ValueError(f"Invalid size: Choose from [small, standard, large].")
+
+    reference_width = 6.0
+    font_scale = figsize[0] / reference_width
+
+    title_size = int(title_size * font_scale)
+    axis_label_size = int(axis_label_size * font_scale)
+    tick_size = int(tick_size * font_scale)
+    legend_size = int(legend_size * font_scale)
+
+    plt.rcParams.update({
+        # title
+        "axes.titlesize": title_size,
+        # x/y labels
+        "axes.labelsize": axis_label_size,
+        # ticks
+        "xtick.labelsize": tick_size,
+        "ytick.labelsize": tick_size,
+        # legend
+        "legend.fontsize": legend_size,
+        # spacing
+        "axes.titlepad": 10,
+        # output quality
+        "figure.dpi": 300,
+        "savefig.dpi": 300,
+
+        # saving
+        "savefig.bbox": "tight",})
 
 
 def save_clusters(clusters, path: Path):

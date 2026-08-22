@@ -7,20 +7,25 @@ import subprocess, math
 from collections import Counter
 import time
 
+from io_utils import set_publication_style
 
-def plot_length_distribution(unique_global: dict, save_path: Path = None,
+
+def plot_length_distribution(unique_global: dict, save_path: Path = None, show_title: bool = True, size: str = "standard"
 ) -> None:
     """
     Plot length distribution of globally unique sequences.
     """
+    figsize = (6, 4)
+    set_publication_style(size=size, figsize=figsize,)
+    plt.figure(figsize=figsize)
 
     lengths = [len(seq) for seq in unique_global.keys()]
 
-    plt.figure(figsize=(6, 4))
     plt.hist(lengths, bins=20, color="tab:blue", edgecolor="black")
     plt.xlabel("Sequence length (aa)")
     plt.ylabel("Count")
-    plt.title("Length distribution of globally unique sequences")
+    if show_title:
+        plt.title("Length distribution of globally unique sequences")
     plt.tight_layout()
 
     if save_path is not None:
@@ -31,11 +36,14 @@ def plot_length_distribution(unique_global: dict, save_path: Path = None,
     plt.close()
 
 
-def plot_occurrence_distribution(unique_global: dict, save_path: Path = None,
+def plot_occurrence_distribution(unique_global: dict, save_path: Path = None, show_title: bool = True, size: str = "standard"
 ) -> None:
     """
     Plot a histogram of sequence lengths weighted by their occurrence.
     """
+    figsize = (6, 4)
+    set_publication_style(size=size, figsize=figsize,)
+    plt.figure(figsize=figsize)
 
     lengths = []
     weights = []
@@ -44,7 +52,6 @@ def plot_occurrence_distribution(unique_global: dict, save_path: Path = None,
         lengths.append(len(sequence))
         weights.append(info["occurrence"])
 
-    plt.figure(figsize=(6, 4))
     plt.hist(
         lengths,
         bins=30,
@@ -53,8 +60,9 @@ def plot_occurrence_distribution(unique_global: dict, save_path: Path = None,
         alpha=0.8,)
 
     plt.xlabel("Sequence length (aa)")
-    plt.ylabel("Occurrence (number of observations)")
-    plt.title("Occurrence of different sequence lengths")
+    plt.ylabel("Occurrence")
+    if show_title:
+        plt.title("Occurrence of different sequence lengths")
     plt.tight_layout()
 
     if save_path is not None:
@@ -129,13 +137,18 @@ def run_clustalw_alignment_from_fasta(fasta_files: list[Path], clustalw_path: st
     return final_aln
 
 
-def plot_gap_distribution(aln_path: Path, save_path: Path = None, plot_title: str | None = None
+def plot_gap_distribution(aln_path: Path, save_path: Path = None, plot_title: str | None = None, show_title: bool = True,
+                          size: str = "standard"
 ) -> None:
     """
     Plot gap fraction per alignment position.
     At each position: number of gaps divided by number of sequences.
     Long regions with low gap fraction and sharp peaks indicate good conservation.
     """
+
+    figsize = (10, 4)
+    set_publication_style(size=size, figsize=figsize,)
+    plt.figure(figsize=figsize)
 
     alignment = AlignIO.read(aln_path, "clustal")
     n_seqs = len(alignment)
@@ -147,15 +160,16 @@ def plot_gap_distribution(aln_path: Path, save_path: Path = None, plot_title: st
         gap_fraction = column.count("-") / n_seqs
         gap_fractions.append(gap_fraction)
 
-    plt.figure(figsize=(10, 4))
     plt.plot(gap_fractions, color="tab:blue")
     plt.xlabel("Alignment position")
     plt.ylabel("Gap fraction")
-    if plot_title is None:
-        plt.title(f"Gap Distribution of {aln_path.stem} across Alignment")
-    else:
-        plt.title(plot_title)
-    plt.ylim(0, 1)
+    if show_title:
+        if plot_title is None:
+            plt.title(f"Gap Distribution of {aln_path.stem} across Alignment")
+        else:
+            plt.title(plot_title)
+    plt.xlim(0, aln_len)
+    plt.ylim(0, 1.1)
     plt.tight_layout()
 
     if save_path is not None:
@@ -167,13 +181,18 @@ def plot_gap_distribution(aln_path: Path, save_path: Path = None, plot_title: st
     plt.close()
 
 
-def plot_entropy_distribution(aln_path: Path, save_path: Path = None, plot_title: str | None = None
+def plot_entropy_distribution(aln_path: Path, save_path: Path = None, plot_title: str | None = None,
+                              show_title: bool = True, size: str = "standard"
 ) -> None:
     """
     Plot Shannon entropy per alignment position.
         -> At each position: calculate with probability to find a residue at a position by the Shannon entropy formula the entropy.
     Lower value points to higher conservation.
     """
+
+    figsize = (10, 4)
+    set_publication_style(size=size, figsize=figsize,)
+    plt.figure(figsize=figsize)
 
     alignment = AlignIO.read(aln_path, "clustal")
     aln_len = alignment.get_alignment_length()
@@ -196,14 +215,15 @@ def plot_entropy_distribution(aln_path: Path, save_path: Path = None, plot_title
 
         entropies.append(entropy)
 
-    plt.figure(figsize=(10, 4))
     plt.plot(entropies, color="tab:blue")
+    plt.xlim(0, aln_len)
     plt.xlabel("Alignment position")
     plt.ylabel("Shannon entropy")
-    if plot_title is None:
-        plt.title(f"Entropy Distribution of {aln_path.stem} across Alignment")
-    else:
-        plt.title(plot_title)
+    if show_title:
+        if plot_title is None:
+            plt.title(f"Entropy Distribution of {aln_path.stem} across Alignment")
+        else:
+            plt.title(plot_title)
     plt.tight_layout()
 
     if save_path is not None:
@@ -214,11 +234,16 @@ def plot_entropy_distribution(aln_path: Path, save_path: Path = None, plot_title
     plt.close()
 
 
-def plot_sequence_logo(aln_path: Path, save_path: Path = None, plot_title: str | None = None, include_gaps: bool = False
+def plot_sequence_logo(aln_path: Path, save_path: Path = None, plot_title: str | None = None, include_gaps: bool = False,
+                       show_title: bool = True, size: str = "standard"
 ) -> None:
     """
     Generate a sequence logo from a ClustalW alignment.
     """
+
+    figsize = (12, 4)
+    set_publication_style(size=size, figsize=figsize,)
+    plt.figure(figsize=figsize)
 
     alignment = AlignIO.read(aln_path, "clustal")
     logo_sequences = []
@@ -236,7 +261,6 @@ def plot_sequence_logo(aln_path: Path, save_path: Path = None, plot_title: str |
     else:
         freq = counts.div(counts.sum(axis=1), axis=0) # creates freq matrix by dividing each aa count by the sum of all aa at this position
 
-    plt.figure(figsize=(12, 4))
     logo = logomaker.Logo(
         freq,
         color_scheme="chemistry")
@@ -246,10 +270,11 @@ def plot_sequence_logo(aln_path: Path, save_path: Path = None, plot_title: str |
 
     plt.xlabel("Alignment position")
     plt.ylabel("Residue frequency")
-    if plot_title is None:
-        plt.title(f"Sequence Logo of {aln_path.stem}")
-    else:
-        plt.title(plot_title)
+    if show_title:
+        if plot_title is None:
+            plt.title(f"Sequence Logo of {aln_path.stem}")
+        else:
+            plt.title(plot_title)
 
     plt.tight_layout()
     if save_path is not None:

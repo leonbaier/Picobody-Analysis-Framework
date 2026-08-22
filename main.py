@@ -113,7 +113,9 @@ structure_prediction_analysis_bool = False # does not work if old pdb files are 
 MD_prep_bool = False
 MD_analysis_bool = False
 wet_lab_analysis_bool = False
-figure_creation_bool = False
+figure_creation_bool = True
+
+show_plot_titles = False
 
 # ---------------Configuration-----------------------
 # choose sequences for structure prediction plddt comparison plots
@@ -228,8 +230,8 @@ print(f"Number of potential binders (candidates): {len(candidate_sequences)}")
 # ---------------general sequence analysis--------------------------
 if general_sequence_analysis_bool:
     print("\n--------------------General Sequence analysis--------------------")
-    plot_length_distribution(unique_global, save_path=path_plot_length_distribution)
-    plot_occurrence_distribution(unique_global, save_path=path_plot_occurrence_distribution)
+    plot_length_distribution(unique_global, save_path=path_plot_length_distribution, show_title=show_plot_titles)
+    plot_occurrence_distribution(unique_global, save_path=path_plot_occurrence_distribution, show_title=show_plot_titles)
 
     alignment_path = run_clustalw_alignment_from_fasta(
         fasta_files=[(save_dir_variable_data /"unique_global.fasta")],
@@ -237,12 +239,12 @@ if general_sequence_analysis_bool:
         output_dir=save_dir_variable_data,
         output_prefix=name_unique_global_alignment)
 
-    plot_gap_distribution(alignment_path, save_path=path_plot_gap_distribution)
-    plot_entropy_distribution(alignment_path, save_path=path_plot_entropy_distribution)
+    plot_gap_distribution(alignment_path, save_path=path_plot_gap_distribution, show_title=show_plot_titles)
+    plot_entropy_distribution(alignment_path, save_path=path_plot_entropy_distribution, show_title=show_plot_titles)
     plot_sequence_logo(alignment_path, include_gaps=False, plot_title="Logo of Global Unique Sequences",
                        save_path=path_plot_sequence_logo_no_gaps)
-    plot_sequence_logo(alignment_path, include_gaps=True, plot_title="Logo of Global Unique Sequences (with gaps)",
-                       save_path=path_plot_sequence_logo_with_gaps)
+    plot_sequence_logo(alignment_path, include_gaps=True, plot_title="Logo of Global Unique Sequences (with gaps)", size="small",
+                       save_path=path_plot_sequence_logo_with_gaps, show_title=show_plot_titles)
 
 # ---------------cystein sequence analysis--------------------------
 if cysteine_sequence_analysis_bool:
