@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 def create_composite_figure(images: dict[str, Path], layout: str, output_file: Path, figure_width_px: int = 3000,
                             row_spacing: int = 20, col_spacing: int = 60, panel_label_size: int = 50,
-                            panel_label_offset_x: int = 40, panel_label_offset_y: int = 25, right_column_label_offset: int = 25
+                            panel_label_offset_x: int = 20, panel_label_offset_y: int = 25, right_column_label_offset: int = 0
 ):
 
     """
@@ -147,7 +147,10 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
 
         final_image.paste(panel["image"], (panel_x, panel_y),)
 
-        label_x = (max(5, panel_x - panel_label_offset_x,) + right_column_label_offset)
+        if cols[0]:
+            label_x = max(5, panel_x - panel_label_offset_x,)
+        else:
+            label_x = (max(5, panel_x - panel_label_offset_x,) + right_column_label_offset)
         label_y = max( 5, panel_y - panel_label_offset_y,)
 
         draw.text(

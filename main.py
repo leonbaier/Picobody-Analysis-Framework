@@ -106,7 +106,7 @@ from figure_creation import (
 run_all_bool = False
 DEBUG = False
 
-general_sequence_analysis_bool = True
+general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
