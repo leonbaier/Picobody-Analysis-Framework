@@ -750,12 +750,11 @@ if wet_lab_analysis_bool:
     plot_affinity_chromatography_run(
         data=affinity_data_all,
         run_name=["20260713_AffinityCaptureSelectBovLC_mCloverV1_50mL", "20260722_AffinityCaptureSelectBovLC_mCloverV12_50ml",
-                  "20260722_AffinityCaptureSelectBovLC_mCloverV13_50ml", "20260722_AffinityCaptureSelectBovLC_mCloverV14_50ml",
-                  "20260805_AffinityCaptureSelectBovLC_mCloverV14-2_50ml"],
-        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14-1", "mCloverV14-2",],
+                  "20260722_AffinityCaptureSelectBovLC_mCloverV13_50ml", "20260805_AffinityCaptureSelectBovLC_mCloverV14-2_50ml"],
+        run_display_names=["V1", "V12", "V13", "V14",],
         signals=["UV", "Conc B"],
         save_path=save_dir_wet_lab_plots / "affinity_chromatography_all.png",
-        title="Affinity Chromatography mCloverV1/12/13/14",
+        title="Affinity Chromatography mCloverV1/12/13/14 with Elution Start",
         conc_b_easy_mode= True)
 
 
@@ -772,9 +771,8 @@ if wet_lab_analysis_bool:
     plot_affinity_chromatography_run(
         data=sec_data_all,
         run_name=["20260723_Superose_6_Increase_mCloverV1", "20260723_Superose_6_Increase_mCloverV12",
-                  "20260724_Superose_6_Increase_mCloverV13", "20260724_Superose_6_Increase_mCloverV14",
-                  "20260806_Superose_6_Increase_mCloverV14_2",],
-        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14-1", "mCloverV14-2",],
+                  "20260724_Superose_6_Increase_mCloverV13", "20260806_Superose_6_Increase_mCloverV14_2",],
+        run_display_names=["V1", "V12", "V13", "V14",],
         signals=["UV"],
         save_path=save_dir_wet_lab_plots / "sec_chromatography_all.png",
         title="Size Exclusion Chromatography mCloverV1/12/13/14")

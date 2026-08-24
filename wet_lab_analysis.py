@@ -4,8 +4,10 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+from matplotlib.ticker import MultipleLocator
 from matplotlib.colors import to_rgb
+from matplotlib.lines import Line2D
+from matplotlib.legend_handler import HandlerBase
 from pypdf import PdfReader
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
@@ -452,7 +454,7 @@ def load_akta_csv(csv_path: str | Path) -> dict:
 
 def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], signals: list[str],
                                     conc_b_easy_mode: bool = False, run_display_names: list[str] | None = None,  save_path=None,
-                                     title: str | None = None, fraction_filter: list[tuple[str, str]] | None = None,
+                                    title: str | None = None, fraction_filter: list[tuple[str, str]] | None = None,
 ):
     """
     Plot affinity chromatography data.csv (äkta output).
@@ -535,34 +537,16 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
 
                     if np.any(elution_mask):
                         start_x = x_values[elution_mask][0]
-                        end_x = x_values[elution_mask][-1]
-
-                        uv_x = np.asarray(run_data["UV"]["x"])
-                        uv_y = np.asarray(run_data["UV"]["y"])
-
-                        peak_mask = ((uv_x >= start_x) & (uv_x <= end_x))
-                        peak_max = np.max(uv_y[peak_mask])
-
-                        y_marker = peak_max + 75
 
                         color = get_variant_color(display_run)
                         ls = "--" if "V14-1" in display_run else "-"
 
-                        ax.hlines(
-                            y=y_marker,
-                            xmin=start_x,
-                            xmax=end_x,
+                        ax.axvline(
+                            x=start_x,
                             color=color,
-                            linewidth=2,
-                            linestyle=ls,)
-
-                        cap_height = 30
-                        ax.vlines(
-                            [start_x, end_x],
-                            y_marker - cap_height / 2,
-                            y_marker + cap_height / 2,
-                            color=color,
-                            linewidth=2,)
+                            linestyle=ls,
+                            linewidth=1.5,
+                            alpha=0.5,)
                     continue
 
                 signal_data = run_data[signal]
@@ -599,33 +583,10 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         ax.set_xlabel("Volume [ml]")
         ax.set_xlim(0, common_max_x)
 
-        if conc_b_easy_mode:
-
-            max_marker = 0
-
-            for run in run_name:
-
-                conc_b = data[run]["Conc B"]
-
-                conc_values = np.asarray(conc_b["y"])
-                x_values = np.asarray(conc_b["x"])
-
-                elution_mask = conc_values > 0
-
-                if not np.any(elution_mask):
-                    continue
-
-                start_x = x_values[elution_mask][0]
-                end_x = x_values[elution_mask][-1]
-
-                uv_x = np.asarray(data[run]["UV"]["x"])
-                uv_y = np.asarray(data[run]["UV"]["y"])
-
-                peak_mask = ((uv_x >= start_x) & (uv_x <= end_x))
-
         ax.set_ylabel(
             f"{first_signal} "
             f"[{data[first_run][first_signal]['y_label']}]")
+        ax.set_ylim(bottom=0)
 
         ax.grid(alpha=0.3)
 
@@ -650,7 +611,49 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         handles = [item[1] for item in sorted_items]
         labels = [item[2] for item in sorted_items]
 
-        ax.legend(handles, labels,)
+        if conc_b_easy_mode:
+            class HandlerElutionLines(HandlerBase):
+                def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans,
+                ):
+                    colors, linestyles = orig_handle
+                    artists = []
+                    n = len(colors)
+
+                    y_positions = [0.1, 0.4, 0.7, 1] # [0.15, 0.35, 0.65, 0.85]
+
+                    for y, color, ls in zip(y_positions, colors, linestyles):
+                        artists.append(
+                            Line2D(
+                                [width * 0.1, width * 0.9],
+                                [height * y, height * y],
+                                color=color,
+                                linestyle=ls,
+                                linewidth=1.2,
+                                alpha=0.7,
+                                transform=trans,))
+
+                    return artists
+
+            elution_handle = (
+                [
+                    get_variant_color("V1"),
+                    get_variant_color("V12"),
+                    get_variant_color("V13"),
+                    get_variant_color("V14"),],
+                [
+                    "-",
+                    "-",
+                    "-",
+                    "-",])
+
+            handles.append(elution_handle)
+            labels.append("Elution start")
+            ax.legend(
+                handles,
+                labels,
+                handler_map={tuple: HandlerElutionLines(),},)
+        else:
+            ax.legend(handles, labels,)
         plt.tight_layout()
 
         if save_path is not None:
@@ -758,7 +761,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                 label="Collected fractions",)
 
     ax1.set_xlim(left=0)
-    ax1.set_xlabel("Volume (ml)")
+    ax1.set_xlabel("Volume [ml]")
 
     if title is None:
         ax1.set_title(run_name)
