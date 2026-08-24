@@ -546,7 +546,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                             color=color,
                             linestyle=ls,
                             linewidth=1.5,
-                            alpha=0.5,)
+                            alpha=0.3,)
                     continue
 
                 signal_data = run_data[signal]
@@ -619,7 +619,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                     artists = []
                     n = len(colors)
 
-                    y_positions = [0.1, 0.4, 0.7, 1] # [0.15, 0.35, 0.65, 0.85]
+                    y_positions = [0, 0.5, 1, 1.5] # [0.15, 0.35, 0.65, 0.85]
 
                     for y, color, ls in zip(y_positions, colors, linestyles):
                         artists.append(
@@ -628,18 +628,18 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                                 [height * y, height * y],
                                 color=color,
                                 linestyle=ls,
-                                linewidth=1.2,
-                                alpha=0.7,
+                                linewidth=2,
+                                alpha=0.5,
                                 transform=trans,))
 
                     return artists
 
             elution_handle = (
                 [
-                    get_variant_color("V1"),
-                    get_variant_color("V12"),
+                    get_variant_color("V14"),
                     get_variant_color("V13"),
-                    get_variant_color("V14"),],
+                    get_variant_color("V12"),
+                    get_variant_color("V1"),],
                 [
                     "-",
                     "-",
@@ -2057,6 +2057,71 @@ def plot_mw_comparison(sec_mals_mw: dict[str, float], theoretical_mw: dict[str, 
     plt.close()
 
 
+def export_dataframe_to_latex(df: pd.DataFrame, csv_path, latex_path, caption: str, label: str, index_name: str = "Variant",
+):
+
+    def latex_escape(text: str) -> str:
+        replacements = {
+            "&": r"\&",
+            "%": r"\%",
+            "$": r"\$",
+            "#": r"\#",
+            "_": r"\_",
+            "{": r"\{",
+            "}": r"\}",}
+        text = str(text)
+
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+
+        return text
+
+    df.to_csv(csv_path)
+
+    with open(latex_path, "w", encoding="utf-8") as f:
+
+        columns = df.columns.tolist()
+
+        f.write("\\begin{table}[htbp]\n")
+        f.write("\\centering\n")
+        f.write(f"\\caption{{{caption}}}\n")
+        f.write(f"\\label{{{label}}}\n")
+
+        f.write(
+            "\\begin{tabular}{l"
+            + "r" * len(columns)
+            + "}\n"
+        )
+
+        f.write("\\hline\n")
+        header = (latex_escape(index_name)+ " & " + " & ".join(latex_escape(col) for col in columns))
+
+        f.write(header + " \\\\\n")
+        f.write("\\hline\n")
+
+        for idx, row in df.iterrows():
+            values = []
+
+            for value in row:
+                if pd.isna(value):
+                    values.append("")
+                elif isinstance(value, (int, float)):
+                    values.append(f"{value:.2f}")
+                else:
+                    values.append(latex_escape(value))
+
+            f.write(
+                latex_escape(idx)
+                + " & "
+                + " & ".join(values)
+                + " \\\\\n"
+            )
+
+        f.write("\\hline\n")
+        f.write("\\end{tabular}\n")
+        f.write("\\end{table}\n")
+
+
 def export_sec_mals_summary_table(sec_mals_data: dict, save_dir_variable_data,
 ) -> pd.DataFrame:
     """
@@ -2123,64 +2188,47 @@ def export_sec_mals_summary_table(sec_mals_data: dict, save_dir_variable_data,
     print(summary)
 
     csv_path = (Path(save_dir_variable_data) / "SEC_MALS_summary.csv")
-    summary.to_csv(csv_path)
     latex_path = (Path(save_dir_variable_data) / "SEC_MALS_summary.tex")
 
-    def latex_escape(text: str) -> str:
-        replacements = {
-            "&": r"\&",
-            "%": r"\%",
-            "$": r"\$",
-            "#": r"\#",
-            "_": r"\_",
-            "{": r"\{",
-            "}": r"\}",
-        }
+    export_dataframe_to_latex(
+        df=summary,
+        csv_path=csv_path,
+        latex_path=latex_path,
+        caption="SEC-MALS characterization of Fab variants.",
+        label="tab:sec_mals_summary",)
 
-        text = str(text)
+    return summary
 
-        for old, new in replacements.items():
-            text = text.replace(old, new)
 
-        return text
+def export_mw_comparison_table(sec_mals_mw: dict[str, float], theoretical_mw: dict[str, float], save_dir,
+                               ms_mw: dict[str, float] | None = None,
+) -> pd.DataFrame:
+    variants = ["V1", "V12", "V13", "V14"]
 
-    with open(latex_path, "w", encoding="utf-8") as f:
+    rows = {}
 
-        columns = summary.columns.tolist()
+    for variant in variants:
 
-        f.write("\\begin{table}[htbp]\n")
-        f.write("\\centering\n")
-        f.write("\\caption{SEC-MALS characterization of Fab variants.}\n")
-        f.write("\\label{tab:sec_mals_summary}\n")
+        row = {"Calculated MW [kDa]": theoretical_mw.get(variant, np.nan),}
+        row["SEC-MALS MW [kDa]"] = (sec_mals_mw.get(variant, np.nan))
+        if ms_mw is not None:
+            row["MS MW [kDa]"] = (ms_mw.get(variant, np.nan))
 
-        f.write(
-            "\\begin{tabular}{l"
-            + "r" * len(columns)
-            + "}\n"
-        )
+        rows[variant] = row
 
-        f.write("\\hline\n")
+    summary = (pd.DataFrame(rows).T.round(2))
 
-        header = "Variant & " + " & ".join(latex_escape(col)for col in columns)
+    csv_path = (Path(save_dir) / "MW_comparison.csv")
+    latex_path = (Path(save_dir) / "MW_comparison.tex")
 
-        f.write(header + " \\\\\n")
-        f.write("\\hline\n")
-
-        for idx, row in summary.iterrows():
-            values = [
-                f"{value:.2f}"
-                if pd.notna(value)
-                else ""
-                for value in row]
-
-            line = f"{idx} & " + " & ".join(values)
-            f.write(line + " \\\\\n")
-
-        f.write("\\hline \n")
-        f.write("\\end{tabular} \n")
-        f.write("\\end{table}\n")
-
-    print(f"Table written to: {csv_path}")
-    print(f"LaTeX written to: {latex_path}")
+    export_dataframe_to_latex(
+        df=summary,
+        csv_path=csv_path,
+        latex_path=latex_path,
+        caption=(
+            "Comparison of calculated, "
+            "mass spectrometry and SEC-MALS "
+            "molecular weights of Fab variants."),
+        label="tab:mw_comparison",)
 
     return summary

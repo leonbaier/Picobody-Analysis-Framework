@@ -97,6 +97,7 @@ from wet_lab_analysis import (
     plot_sec_mals_uv_mw,
     load_theoretical_fab_mw,
     plot_mw_comparison,
+    export_mw_comparison_table,
     export_sec_mals_summary_table)
 from figure_creation import (
     create_composite_figure,)
@@ -968,6 +969,11 @@ if wet_lab_analysis_bool:
         ms_mw=ms_mw,
         save_path=save_dir_wet_lab_plots / "MW_comparison.png",
         title="Comparison of Calculated, MS and SEC-MALS Molecular Weights",)
+    mw_comparsion = export_mw_comparison_table(sec_mals_mw=sec_mals_mw,
+                                               theoretical_mw=theoretical_mw,
+                                               ms_mw =ms_mw,
+                                               save_dir=save_dir_variable_data)
+    mw_comparsion.to_csv(save_dir_variable_data / "mw_comparison.csv", index=False)
     sec_mals_summary = export_sec_mals_summary_table(
         sec_mals_data=sec_mals_data,
         save_dir_variable_data=save_dir_variable_data,)
