@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+from matplotlib.colors import to_rgb
 from pypdf import PdfReader
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
@@ -13,22 +14,35 @@ from io import StringIO
 
 
 def get_variant_color(name: str) -> str:
-    OKABE_ITO = {
+    okabe_ito = {
         "blue": "#0072B2",
         "orange": "#E69F00",
         "green": "#009E73",
-        "magenta": "#CC79A7",}
+        "magenta": "#CC79A7",
+        "grey": "#7F7F7F",
+        "black": "#000000",}
+
+    name = str(name)
+
+    if "BSA" in name:
+        return okabe_ito["grey"]
+
+    if "PBS" in name:
+        return okabe_ito["black"]
 
     if "V14" in name:
-        return OKABE_ITO["magenta"]
-    elif "V13" in name:
-        return OKABE_ITO["green"]
-    elif "V12" in name:
-        return OKABE_ITO["orange"]
-    elif "V1" in name:
-        return OKABE_ITO["blue"]
+        return okabe_ito["magenta"]
 
-    return "black"
+    if "V13" in name:
+        return okabe_ito["green"]
+
+    if "V12" in name:
+        return okabe_ito["orange"]
+
+    if "V1" in name:
+        return okabe_ito["blue"]
+
+    return okabe_ito["black"]
 
 
 def create_fab_reports(sequence_file: str | Path, output_dir: str | Path,
@@ -1724,15 +1738,6 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
     if not show_uv and not show_mw:
         raise ValueError("At least one of show_uv or show_mw must be True.")
 
-    colors = {
-        "V1": "tab:blue",
-        "V12": "tab:orange",
-        "V13": "tab:green",
-        "V14": "tab:red",
-        "BSA": "tab:purple",
-        "PBS": "grey",
-    }
-
     fig, ax_uv = plt.subplots(figsize=(9, 5))
     ax_mw = None
 
@@ -1782,12 +1787,12 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
             ax_uv.plot(
                 valid[time_column],
                 valid[uv_column],
-                color=colors.get(sample),
+                color=get_variant_color(sample),
                 linewidth=2,
                 linestyle="-",
                 label=sample,)
 
-        ax_uv.set_ylabel("UV Absorbance (AU)")
+        ax_uv.set_ylabel("UV Absorbance [%]")
 
     # --------------------------------------------------
     # MALS molecular weights
@@ -1827,7 +1832,10 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
                 ax_mw.plot(
                     time.iloc[segment],
                     mass.iloc[segment],
-                    color="grey" if show_uv else colors.get(sample),
+                    color=(
+                        get_variant_color("BSA")
+                        if show_uv and sample == "BSA"
+                        else get_variant_color(sample)),
                     linestyle="--" if show_uv else "-",
                     linewidth=2,
                     alpha=0.9,)
@@ -1875,13 +1883,13 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
                         textcoords="offset points",
                         fontsize=9,)
 
-        ax_mw.set_ylabel("Molecular Weight (kDa)")
+        ax_mw.set_ylabel("Molecular Weight [kDa]")
 
     # --------------------------------------------------
     # Layout
     # --------------------------------------------------
 
-    ax_uv.set_xlabel("Time (min)")
+    ax_uv.set_xlabel("Time [min]")
     ax_uv.set_xlim(10, 30)
     ax_uv.xaxis.set_major_locator(MultipleLocator(5))
 
@@ -1900,7 +1908,7 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
         plt.Line2D(
             [0],
             [0],
-            color=colors[sample],
+            color=get_variant_color(sample),
             linewidth=2,
             label=sample,)
         for sample in samples]
@@ -1941,6 +1949,9 @@ def load_theoretical_fab_mw(report_dir: str | Path,
 def plot_mw_comparison(sec_mals_mw: dict[str, float], theoretical_mw: dict[str, float], ms_mw: dict[str, float] | None = None,
                        save_path=None, title: str | None = None,
 ):
+    def lighten_color(color, amount=0.5):
+        rgb = np.array(to_rgb(color))
+        return tuple(rgb + (1 - rgb) * amount)
 
     variants = ["V1", "V12", "V13", "V14"]
 
@@ -1955,45 +1966,81 @@ def plot_mw_comparison(sec_mals_mw: dict[str, float], theoretical_mw: dict[str, 
     if ms_mw is not None:
         ms_values = [ms_mw.get(v, np.nan) for v in variants]
 
-        ax.bar(
-            x - width,
-            calc_values,
-            width,
-            label="Calculated MW",)
-        ax.bar(
-            x,
-            ms_values,
-            width,
-            label="MS MW",)
-        ax.bar(
-            x + width,
-            sec_values,
-            width,
-            label="SEC-MALS MW",)
-    else:
 
-        ax.bar(
-            x - width / 2,
-            calc_values,
-            width,
-            label="Calculated MW",)
-        ax.bar(
-            x + width / 2,
-            sec_values,
-            width,
-            label="SEC-MALS MW",)
+    for i, variant in enumerate(variants):
+
+        base_color = get_variant_color(variant)
+
+        calc_color = lighten_color(base_color, 0.70)
+        ms_color = lighten_color(base_color, 0.35)
+        sec_color = base_color
+
+        if ms_mw is not None:
+            ax.bar(
+                x[i] - width,
+                calc_values[i],
+                width,
+                color=calc_color,
+                hatch="//",
+                edgecolor="black",)
+            ax.bar(
+                x[i],
+                ms_values[i],
+                width,
+                color=ms_color,
+                hatch="\\\\",
+                edgecolor="black",)
+            ax.bar(
+                x[i] + width,
+                sec_values[i],
+                width,
+                color=sec_color,
+                edgecolor="black",)
+        else:
+            ax.bar(
+                x[i] - width,
+                calc_values[i],
+                width,
+                color=calc_color,
+                hatch="//",
+                edgecolor="black", )
+            ax.bar(
+                x[i] + width,
+                sec_values[i],
+                width,
+                color=sec_color,
+                edgecolor="black", )
 
     ax.set_xticks(x)
     ax.set_xticklabels(variants)
 
-    ax.set_ylabel("Molecular Weight (kDa)")
+    ax.set_ylabel("Molecular Weight [kDa]")
 
     if title is None:
         ax.set_title("Comparison of Molecular Weights")
     else:
         ax.set_title(title)
 
-    ax.legend()
+    method_handles = [
+        plt.Rectangle(
+            (0, 0), 1, 1,
+            facecolor="white",
+            edgecolor="black",
+            hatch="//",
+            label="Calculated MW",),
+        plt.Rectangle(
+            (0, 0), 1, 1,
+            facecolor="white",
+            edgecolor="black",
+            hatch="\\\\",
+            label="MS MW",),
+        plt.Rectangle(
+            (0, 0), 1, 1,
+            facecolor="black",
+            edgecolor="black",
+            label="SEC-MALS MW",),]
+    ax.legend(handles=method_handles)
+
     ax.grid(axis="y", alpha=0.3)
 
     plt.tight_layout()
@@ -2059,12 +2106,12 @@ def export_sec_mals_summary_table(sec_mals_data: dict, save_dir_variable_data,
 
         rows[sample] = {
 
-            "Mn (kDa)": pd.to_numeric(row[mn_col], errors="coerce",),
-            "Mn uncertainty (kDa)": pd.to_numeric(row[mn_unc_col], errors="coerce",),
-            "Mw (kDa)": pd.to_numeric(row[mw_col], errors="coerce",),
-            "Mw uncertainty (kDa)": pd.to_numeric(row[mw_unc_col], errors="coerce",),
+            "Mn [kDa]": pd.to_numeric(row[mn_col], errors="coerce",),
+            "Mn uncertainty [kDa]": pd.to_numeric(row[mn_unc_col], errors="coerce",),
+            "Mw [kDa]": pd.to_numeric(row[mw_col], errors="coerce",),
+            "Mw uncertainty [kDa]": pd.to_numeric(row[mw_unc_col], errors="coerce",),
             "Mw/Mn": pd.to_numeric(row[pdi_col], errors="coerce",),
-            "Mass recovery (%)": pd.to_numeric(row[recovery_col], errors="coerce",),
+            "Mass recovery [%]": pd.to_numeric(row[recovery_col], errors="coerce",),
         }
 
     summary = (pd.DataFrame(rows).T.round(2))
