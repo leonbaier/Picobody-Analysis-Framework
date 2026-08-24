@@ -112,8 +112,8 @@ structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
-wet_lab_analysis_bool = False
-figure_creation_bool = True
+wet_lab_analysis_bool = True
+figure_creation_bool = False
 
 show_plot_titles = False
 
@@ -723,7 +723,6 @@ if wet_lab_analysis_bool:
     for csv_file in save_dir_wetlab_affinity.glob("*.csv"):
         run_name = csv_file.stem
         print(f"Loading {run_name}")
-
         affinity_data_all[run_name] = load_akta_csv(csv_file)
     print(f"Loaded {len(affinity_data_all)} chromatograms")
 
@@ -756,7 +755,8 @@ if wet_lab_analysis_bool:
         run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14-1", "mCloverV14-2",],
         signals=["UV", "Conc B"],
         save_path=save_dir_wet_lab_plots / "affinity_chromatography_all.png",
-        title="Affinity Chromatography mCloverV1/12/13/14")
+        title="Affinity Chromatography mCloverV1/12/13/14",
+        conc_b_easy_mode= True)
 
 
     # plot sec chromatography results

@@ -12,6 +12,25 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from io import StringIO
 
 
+def get_variant_color(name: str) -> str:
+    OKABE_ITO = {
+        "blue": "#0072B2",
+        "orange": "#E69F00",
+        "green": "#009E73",
+        "magenta": "#CC79A7",}
+
+    if "V14" in name:
+        return OKABE_ITO["magenta"]
+    elif "V13" in name:
+        return OKABE_ITO["green"]
+    elif "V12" in name:
+        return OKABE_ITO["orange"]
+    elif "V1" in name:
+        return OKABE_ITO["blue"]
+
+    return "black"
+
+
 def create_fab_reports(sequence_file: str | Path, output_dir: str | Path,
 ) -> dict:
 
@@ -418,8 +437,8 @@ def load_akta_csv(csv_path: str | Path) -> dict:
 
 
 def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], signals: list[str],
-                                     run_display_names: list[str] | None = None, save_path=None, title: str | None = None,
-                                     fraction_filter: list[tuple[str, str]] | None = None
+                                    conc_b_easy_mode: bool = False, run_display_names: list[str] | None = None,  save_path=None,
+                                     title: str | None = None, fraction_filter: list[tuple[str, str]] | None = None,
 ):
     """
     Plot affinity chromatography data.csv (äkta output).
@@ -463,18 +482,16 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
     if isinstance(run_name, (list, tuple)):  # if list the only this block is performed otherwise skip
 
         fig, ax = plt.subplots(figsize=(12, 6))
-        common_max_x = min(
-            np.max(data[run][signals[0]]["x"])
-            for run in run_name)
+        common_max_x = min(np.max(data[run][signals[0]]["x"]) for run in run_name)
 
-        run_colors = plt.cm.tab10.colors
         signal_styles = {
             "UV": "-",
             "Conductivity": "--",
             "Conc B": ":",}
 
+        active_signals = [s for s in signals if not (conc_b_easy_mode and s == "Conc B")]
+        multiple_signals = len(active_signals) > 1
         multiple_runs = len(run_name) > 1
-        multiple_signals = len(signals) > 1
 
         if run_display_names is not None:
             if len(run_display_names) != len(run_name):
@@ -494,13 +511,50 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
             for signal in signals:
                 if signal not in run_data:
                     raise KeyError(f"Signal '{signal}' not found in run '{run}'.")
+                if conc_b_easy_mode and signal == "Conc B":
+                    conc_b = run_data["Conc B"]
+
+                    conc_values = np.asarray(conc_b["y"])
+                    x_values = np.asarray(conc_b["x"])
+
+                    elution_mask = conc_values >= 100
+
+                    if np.any(elution_mask):
+                        start_x = x_values[elution_mask][0]
+                        end_x = x_values[elution_mask][-1]
+
+                        uv_x = np.asarray(run_data["UV"]["x"])
+                        uv_y = np.asarray(run_data["UV"]["y"])
+
+                        peak_mask = ((uv_x >= start_x) & (uv_x <= end_x))
+                        peak_max = np.max(uv_y[peak_mask])
+
+                        y_marker = peak_max + 75
+
+                        color = get_variant_color(display_run)
+                        ls = "--" if "V14-1" in display_run else "-"
+
+                        ax.hlines(
+                            y=y_marker,
+                            xmin=start_x,
+                            xmax=end_x,
+                            color=color,
+                            linewidth=2,
+                            linestyle=ls,)
+
+                        cap_height = 30
+                        ax.vlines(
+                            [start_x, end_x],
+                            y_marker - cap_height / 2,
+                            y_marker + cap_height / 2,
+                            color=color,
+                            linewidth=2,)
+                    continue
 
                 signal_data = run_data[signal]
 
                 if signal_data.get("type") != "numeric":
                     continue
-
-                linestyle = signal_styles.get(signal, "-")
 
                 if multiple_runs:
                     if multiple_signals:
@@ -510,23 +564,54 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                 else:
                     label = signal
 
+                linestyle = signal_styles.get(signal, "-")
+                if signal == "UV":
+                    if "V14-1" in display_run:
+                        linestyle = "--"
+                    elif "V14-2" in display_run:
+                        linestyle = "-"
+
                 ax.plot(
                     signal_data["x"],
                     signal_data["y"],
                     label=label,
-                    color=run_colors[i % len(run_colors)],
+                    color = get_variant_color(display_run),
                     linestyle=linestyle,
                     linewidth=2.5,)
 
         first_run = run_name[0]
-        first_signal = signals[0]
+        first_signal = active_signals[0]
 
-        ax.set_xlabel("Volume (ml)")
+        ax.set_xlabel("Volume [ml]")
         ax.set_xlim(0, common_max_x)
+
+        if conc_b_easy_mode:
+
+            max_marker = 0
+
+            for run in run_name:
+
+                conc_b = data[run]["Conc B"]
+
+                conc_values = np.asarray(conc_b["y"])
+                x_values = np.asarray(conc_b["x"])
+
+                elution_mask = conc_values > 0
+
+                if not np.any(elution_mask):
+                    continue
+
+                start_x = x_values[elution_mask][0]
+                end_x = x_values[elution_mask][-1]
+
+                uv_x = np.asarray(data[run]["UV"]["x"])
+                uv_y = np.asarray(data[run]["UV"]["y"])
+
+                peak_mask = ((uv_x >= start_x) & (uv_x <= end_x))
 
         ax.set_ylabel(
             f"{first_signal} "
-            f"({data[first_run][first_signal]['y_label']})")
+            f"[{data[first_run][first_signal]['y_label']}]")
 
         ax.grid(alpha=0.3)
 
@@ -591,22 +676,15 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
     fig, ax1 = plt.subplots(figsize=(12, 6))
     axes = [ax1]
 
+    if conc_b_easy_mode:
+        numeric_signals = [s for s in numeric_signals if s != "Conc B"]
     if len(numeric_signals) >= 2:
         ax2 = ax1.twinx()
         axes.append(ax2)
-
     if len(numeric_signals) >= 3:
         ax3 = ax1.twinx()
         ax3.spines["right"].set_position(("axes", 1.10))
         axes.append(ax3)
-
-    colors = [
-        "tab:blue",
-        "tab:red",
-        "tab:green",
-        "tab:orange",
-        "tab:purple",
-        "tab:brown",]
 
     handles = []
     labels = []
@@ -622,7 +700,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
             token in signal_lower
             for token in ["uv", "uv_vis", "uvvis"])
 
-        color = colors[i % len(colors)]
+        color = get_variant_color(run_name)
 
         line = ax.plot(
             signal_data["x"],
