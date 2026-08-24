@@ -2076,13 +2076,59 @@ def export_sec_mals_summary_table(sec_mals_data: dict, save_dir_variable_data,
     summary.to_csv(csv_path)
     latex_path = (Path(save_dir_variable_data) / "SEC_MALS_summary.tex")
 
+    def latex_escape(text: str) -> str:
+        replacements = {
+            "&": r"\&",
+            "%": r"\%",
+            "$": r"\$",
+            "#": r"\#",
+            "_": r"\_",
+            "{": r"\{",
+            "}": r"\}",
+        }
+
+        text = str(text)
+
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+
+        return text
+
     with open(latex_path, "w", encoding="utf-8") as f:
+
+        columns = summary.columns.tolist()
+
+        f.write("\\begin{table}[htbp]\n")
+        f.write("\\centering\n")
+        f.write("\\caption{SEC-MALS characterization of Fab variants.}\n")
+        f.write("\\label{tab:sec_mals_summary}\n")
+
         f.write(
-            summary.to_latex(
-                float_format="%.2f",
-                caption="SEC-MALS characterization of Fab variants.",
-                label="tab:sec_mals_summary",)
+            "\\begin{tabular}{l"
+            + "r" * len(columns)
+            + "}\n"
         )
+
+        f.write("\\hline\n")
+
+        header = "Variant & " + " & ".join(latex_escape(col)for col in columns)
+
+        f.write(header + " \\\\\n")
+        f.write("\\hline\n")
+
+        for idx, row in summary.iterrows():
+            values = [
+                f"{value:.2f}"
+                if pd.notna(value)
+                else ""
+                for value in row]
+
+            line = f"{idx} & " + " & ".join(values)
+            f.write(line + " \\\\\n")
+
+        f.write("\\hline \n")
+        f.write("\\end{tabular} \n")
+        f.write("\\end{table}\n")
 
     print(f"Table written to: {csv_path}")
     print(f"LaTeX written to: {latex_path}")
