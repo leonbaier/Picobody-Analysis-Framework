@@ -1137,8 +1137,8 @@ def plot_bli_phase_runs(bli_data: dict, runs: list[tuple[str, str]], phases: lis
             linewidth=2,
             label=label,)
 
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Binding (nm)")
+    ax.set_xlabel("Time [s]")
+    ax.set_ylabel("Binding [nm]")
 
     if title is not None:
         ax.set_title(title)
@@ -1317,19 +1317,21 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
 
     plt.figure(figsize=(8, 5))
 
-    colors = [
-        "tab:blue",
-        "tab:orange",
-        "tab:green",]
+    base_color = get_variant_color(sample)
 
     for i, sample_key in enumerate(sample_keys):
         df = experiment_data[sample_key]
+
+        markers = ["o", "s", "^"]
         plt.scatter(
             df["Temperature"],
             df[signal],
-            s=12,
-            color=colors[i % len(colors)],
-            label=f"Replicate {i + 1}",)
+            s=14,
+            marker=markers[i % len(markers)],
+            color=base_color,
+            alpha=0.8,
+            label=f"Replicate {i + 1}",
+        )
 
     tm1 = None
     tm2 = None
@@ -1426,7 +1428,8 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
             color="black",
             linewidth=2.5,
             label="Peak fit",
-            zorder=10,)
+            zorder=10,
+            alpha=1.0,)
 
         if show_tm:
             plt.axvline(
@@ -1474,7 +1477,7 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
             )
 
     plt.xlim(left=min(experiment_data[sample_keys[0]]["Temperature"]))
-    plt.xlabel("Temperature (°C)")
+    plt.xlabel("Temperature [°C]")
     plt.ylabel(signal)
 
     if title:
