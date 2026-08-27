@@ -1319,18 +1319,25 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
 
     base_color = get_variant_color(sample)
 
+    alphas = np.linspace(0.3, 0.9, len(sample_keys))
+
     for i, sample_key in enumerate(sample_keys):
         df = experiment_data[sample_key]
-
-        markers = ["o", "s", "^"]
         plt.scatter(
             df["Temperature"],
             df[signal],
-            s=14,
-            marker=markers[i % len(markers)],
             color=base_color,
-            alpha=0.8,
-            label=f"Replicate {i + 1}",
+            alpha=alphas[i],
+            s=10,
+            label=None)
+
+        plt.plot(
+            df["Temperature"],
+            df[signal],
+            color=base_color,
+            alpha=alphas[i],
+            linewidth=1.5,
+            label=f"Replicate {i + 1}"
         )
 
     tm1 = None
@@ -1436,14 +1443,16 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
                 tm1,
                 color="red",
                 linestyle="--",
-                linewidth=1.5,)
+                linewidth=1.5,
+                label="$T_{m1}$",)
 
             if tm2 is not None:
                 plt.axvline(
                     tm2,
-                    color="red",
+                    color="darkred",
                     linestyle="--",
-                    linewidth=1.5,)
+                    linewidth=1.5,
+                    label="$T_{m2}$",)
 
         if tonset is not None:
             plt.axvline(
@@ -1451,17 +1460,18 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
                 color="darkorange",
                 linestyle="--",
                 linewidth=1.5,
-                label="Tonset",)
+                label="$T_{onset}$",)
 
     if show_values:
         text_lines = []
 
         if tonset is not None:
-            text_lines.append(f"Tonset = {tonset:.1f} °C")
+            text_lines.append(f"$T_{{onset}}$ = {tonset:.1f} °C")
         if tm1 is not None:
-            text_lines.append(f"Tm1 = {tm1:.1f} °C")
+            text_lines.append(f"$T_{{m1}}$ = {tm1:.1f} °C")
         if tm2 is not None:
-            text_lines.append(f"Tm2 = {tm2:.1f} °C")
+            text_lines.append(f"$T_{{m2}}$ = {tm2:.1f} °C")
+
         if text_lines:
             plt.gca().text(
                 0.98,
@@ -1473,7 +1483,7 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
                 bbox=dict(
                     facecolor="white",
                     edgecolor="black",
-                    alpha=0.9,),
+                    alpha=0.9, ),
             )
 
     plt.xlim(left=min(experiment_data[sample_keys[0]]["Temperature"]))
