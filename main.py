@@ -915,18 +915,18 @@ if wet_lab_analysis_bool:
         reference_experiment="20260730_mCloverV1-12-13_Export_30_07_2026")
 
     experiments = [
-        ("PBS", "PBS", "20260730_mCloverV1-12-13_Export_30_07_2026"),
-        ("mCloverV1", "V1", "20260730_mCloverV1-12-13_Export_30_07_2026"),
-        ("mCloverV12", "V12", "20260730_mCloverV1-12-13_Export_30_07_2026"),
-        ("mCloverV13", "V13", "20260730_mCloverV1-12-13_Export_30_07_2026"),
-        ("PBS", "PBS", "20260812_mCloverV14_Export_12_08_2026"),
-        ("mCloverV14", "V14", "20260812_mCloverV14_Export_12_08_2026"),
-        ("PBS", "PBS", "20260813_mCloverV14_Export_13_08_2026"),
-        ("mCloverV14 (0.1 mg/ml)", "V14 - 0.1", "20260813_mCloverV14_Export_13_08_2026"),
-        ("mCloverV14 (0.652 mg/ml)", "V14 - 0.652", "20260813_mCloverV14_Export_13_08_2026"),
+        ("PBS", "PBS", "20260730_mCloverV1-12-13_Export_30_07_2026", False),
+        ("mCloverV1 (0.1 mg/ml)", "V1", "20260730_mCloverV1-12-13_Export_30_07_2026", True),
+        ("mCloverV12 (0.1 mg/ml)", "V12", "20260730_mCloverV1-12-13_Export_30_07_2026", True),
+        ("mCloverV13 (0.1 mg/ml)", "V13", "20260730_mCloverV1-12-13_Export_30_07_2026", True),
+        ("PBS", "PBS", "20260812_mCloverV14_Export_12_08_2026", False),
+        ("mCloverV14 (0.1 mg/ml)", "V14", "20260812_mCloverV14_Export_12_08_2026", True),
+        ("PBS", "PBS", "20260813_mCloverV14_Export_13_08_2026", False),
+        ("mCloverV14 (0.1 mg/ml)", "V14 - 0.1", "20260813_mCloverV14_Export_13_08_2026", True),
+        ("mCloverV14 (0.652 mg/ml)", "V14 - 0.652", "20260813_mCloverV14_Export_13_08_2026", True),
     ]
 
-    for variant, variant_short, experiment in experiments:
+    for variant, variant_short, experiment, show_T in experiments:
         plot_supr_dsf(
             supr_dsf_data=supr_dsf_data,
             experiment=experiment,
@@ -941,8 +941,8 @@ if wet_lab_analysis_bool:
             sample=variant_short,
             signal="dBcm",
             smooth=True,
-            show_tm=True,
-            show_values=True,
+            show_tm=show_T,
+            show_values=show_T,
             save_path=(save_dir_wet_lab_plots / f"{variant_short}_{experiment}_dBCM.png"),
             title=f"{variant} dBCM",)
 

@@ -1454,13 +1454,13 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
                     linewidth=1.5,
                     label="$T_{m2}$",)
 
-        if tonset is not None:
-            plt.axvline(
-                tonset,
-                color="darkorange",
-                linestyle="--",
-                linewidth=1.5,
-                label="$T_{onset}$",)
+            if tonset is not None:
+                plt.axvline(
+                    tonset,
+                    color="darkorange",
+                    linestyle="--",
+                    linewidth=1.5,
+                    label="$T_{onset}$",)
 
     if show_values:
         text_lines = []
