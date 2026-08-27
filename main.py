@@ -787,6 +787,7 @@ if wet_lab_analysis_bool:
     # plot BLI runs
     bli_data = load_bli_dataset(save_dir_wetlab_bli)
 
+    # first runs (V1, 13, 13)
     for variant in ["V1", "V12", "V13",]:
         plot_bli_runs(
             bli_data=bli_data,
@@ -800,8 +801,47 @@ if wet_lab_analysis_bool:
                 f"mClover{variant} Baseline",
                 f"mClover{variant} Binding Signal",],
             save_path=(save_dir_wet_lab_plots / f"BLI_{variant}.png"),
-            title=f"BLI of mClover{variant}",)
+            title=f"BLI of mClover{variant} (0.200 mg/ml)",)
 
+    # V13 experiments repetition
+    special_case_bli = [{
+        "date": "2026-07-28",
+        "run_names": [
+            "mClover_controll",
+            "mCloverV13_alone",
+            "mCloverV13_mClover", ],
+        "save_name": "BLI_V13_2_0.05.png",
+        "title": "BLI mCloverV13 (0.05 mg/ml)", },
+        {
+            "date": "2026-07-30",
+            "run_names": [
+                "mClover_PBS-Tween_0.025",
+                "mCloverV13_alone_0.200",
+                "mCloverV13_mClover_0.200", ],
+            "save_name": "BLI_V13_3.png",
+            "title": "BLI mCloverV13 (0.200 mg/ml)", },
+        {
+            "date": "2026-08-03",
+            "run_names": [
+                "mClover_PBS_0.025",
+                "mCloverV13_alone_0.200",
+                "mCloverV13_mClover_0.200", ],
+            "save_name": "BLI_V13_4.png",
+            "title": "BLI mCloverV13 (0.200 mg/ml)", },]
+
+    for cfg in special_case_bli:
+        plot_bli_runs(
+            bli_data=bli_data,
+            date=cfg["date"],
+            run_names=cfg["run_names"],
+            run_display_names=[
+                "mClover Baseline",
+                f"mCloverV13 Baseline",
+                f"mCloverV13 Binding Signal", ],
+            save_path=save_dir_wet_lab_plots / cfg["save_name"],
+            title=cfg["title"], )
+
+    # positive and negative references
     for Fab in ["aGNb53nt", "NoKnob", "mCloverV14",]:
         plot_bli_runs(
             bli_data=bli_data,
@@ -817,18 +857,13 @@ if wet_lab_analysis_bool:
             save_path=(save_dir_wet_lab_plots / f"BLI_{Fab}.png"),
             title=f"BLI of {Fab}",)
 
+    # V14 and GNb53nt repetition
     runs = [
-        ("mCloverV14_2",
-         "mCloverV14_alone",
-         "mCloverV14_mClover",),
-        ("GNb53nt_0.025",
-         "GNb53nt_alone_0",
-         "GNb53nt_mClover_0",),
-        ("GNb53nt_500nM",
-         "GNb53nt_alone_500nM",
-         "GNb53nt_mClover_500nM",),]
+        ("mCloverV14_2", "mCloverV14 (0,2 mg/ml)" ,"mCloverV14_alone", "mCloverV14_mClover",),
+        ("GNb53nt", "GNb53nt (0.025 m/ml)", "GNb53nt_alone_0", "GNb53nt_mClover_0",),
+        ("GNb53nt", "GNb53nt (500nM)" , "GNb53nt_alone_500nM", "GNb53nt_mClover_500nM",),]
 
-    for label, baseline_run, binding_run in runs:
+    for label, title, baseline_run, binding_run in runs:
         plot_bli_runs(
             bli_data=bli_data,
             date="2026-08-12",
@@ -841,46 +876,9 @@ if wet_lab_analysis_bool:
                 f"{label} Baseline",
                 f"{label} Binding Signal",],
             save_path=(save_dir_wet_lab_plots / f"BLI_{label}.png"),
-            title=f"BLI of {label}",)
+            title=f"BLI of {title}",)
 
-    special_case_bli = [{
-            "date": "2026-07-28",
-            "run_names": [
-                "mClover_controll",
-                "mCloverV13_alone",
-                "mCloverV13_mClover",],
-            "save_name": "BLI_V13_2_0.05.png",
-            "title": "BLI mCloverV13 with 0.05 mg/ml",},
-        {
-            "date": "2026-07-30",
-            "run_names": [
-                "mClover_PBS-Tween_0.025",
-                "mCloverV13_alone_0.200",
-                "mCloverV13_mClover_0.200",],
-            "save_name": "BLI_V13_3.png",
-            "title": "BLI mCloverV13",},
-        {
-            "date": "2026-08-03",
-            "run_names": [
-                "mClover_PBS_0.025",
-                "mCloverV13_alone_0.200",
-                "mCloverV13_mClover_0.200", ],
-            "save_name": "BLI_V13_4.png",
-            "title": "BLI mCloverV13", },
-    ]
-
-    for cfg in special_case_bli:
-        plot_bli_runs(
-            bli_data=bli_data,
-            date=cfg["date"],
-            run_names=cfg["run_names"],
-            run_display_names=[
-                "mClover Baseline",
-                f"mCloverV13 Baseline",
-                f"mCloverV13 Binding Signal",],
-            save_path=save_dir_wet_lab_plots / cfg["save_name"],
-            title=cfg["title"],)
-
+    # plot only assocciation phase
     plot_bli_phase_runs(
         bli_data=bli_data,
         runs=[

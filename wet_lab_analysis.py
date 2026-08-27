@@ -22,9 +22,17 @@ def get_variant_color(name: str) -> str:
         "green": "#009E73",
         "magenta": "#CC79A7",
         "grey": "#7F7F7F",
-        "black": "#000000",}
+        "black": "#000000",
+        "red": "#D55E00",  # Für No Knob
+        "skyblue": "#56B4E9",  # Für Nanobodies
+    }
 
     name = str(name)
+    if "NoKnob" in name or "No Knob" in name:
+        return okabe_ito["red"]
+
+    if "GNb53nt" in name:
+        return okabe_ito["skyblue"]
 
     if "BSA" in name:
         return okabe_ito["grey"]
@@ -1006,12 +1014,24 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], run_display_n
             if run_display_names is not None
             else run_name)
 
+        if "mClover Baseline" in label:
+            line_color = "lightgray"
+            zorder = 1
+        elif "Baseline" in label:
+            line_color = "dimgray"
+            zorder = 2
+        else:
+            line_color = get_variant_color(label)
+            zorder = 3
+
         df = bli_data[date]["runs"][run_name]
         ax.plot(
             df["Time (s)"],
             df["Binding (nm)"],
             linewidth=2,
-            label=label,)
+            color=line_color,
+            zorder=zorder,
+            label=label, )
 
     steps = bli_data[date]["steps"]
     cumulative_time = 0
@@ -1043,11 +1063,11 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], run_display_n
 
         cumulative_time += duration
 
-    plt.xlabel("Time (s)")
-    plt.ylabel("Binding (nm)")
+    plt.xlabel("Time [s]")
+    plt.ylabel("Binding [nm]")
 
     plt.xlim(0, cumulative_time)
-    plt.ylim(-0.1, 1.0)
+    plt.ylim(-0.1, 1.2)
 
     if title is not None:
         plt.title(title)
@@ -1085,6 +1105,7 @@ def plot_bli_phase_runs(bli_data: dict, runs: list[tuple[str, str]], phases: lis
             raise KeyError(f"Run '{run_name}' not found for date '{date}'.")
 
         label = (run_display_names[i] if run_display_names is not None else run_name)
+        line_color = get_variant_color(label)
 
         steps = bli_data[date]["steps"]
         phase_ranges = {}
@@ -1135,7 +1156,8 @@ def plot_bli_phase_runs(bli_data: dict, runs: list[tuple[str, str]], phases: lis
             df_plot["Time (s)"],
             df_plot["Binding (nm)"],
             linewidth=2,
-            label=label,)
+            color=line_color,
+            label=label, )
 
     ax.set_xlabel("Time [s]")
     ax.set_ylabel("Binding [nm]")
