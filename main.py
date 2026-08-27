@@ -752,7 +752,7 @@ if wet_lab_analysis_bool:
         data=affinity_data_all,
         run_name=["20260713_AffinityCaptureSelectBovLC_mCloverV1_50mL", "20260722_AffinityCaptureSelectBovLC_mCloverV12_50ml",
                   "20260722_AffinityCaptureSelectBovLC_mCloverV13_50ml", "20260805_AffinityCaptureSelectBovLC_mCloverV14-2_50ml"],
-        run_display_names=["V1", "V12", "V13", "V14",],
+        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14",],
         signals=["UV", "Conc B"],
         save_path=save_dir_wet_lab_plots / "affinity_chromatography_all.png",
         title="Affinity Chromatography mCloverV1/12/13/14 with Elution Start",
@@ -773,7 +773,7 @@ if wet_lab_analysis_bool:
         data=sec_data_all,
         run_name=["20260723_Superose_6_Increase_mCloverV1", "20260723_Superose_6_Increase_mCloverV12",
                   "20260724_Superose_6_Increase_mCloverV13", "20260806_Superose_6_Increase_mCloverV14_2",],
-        run_display_names=["V1", "V12", "V13", "V14",],
+        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14",],
         signals=["UV"],
         save_path=save_dir_wet_lab_plots / "sec_chromatography_all.png",
         title="Size Exclusion Chromatography mCloverV1/12/13/14")
@@ -783,102 +783,83 @@ if wet_lab_analysis_bool:
         config_file=save_dir_wetlab_sec / "sec_fraction_config.csv",
         save_path=save_dir_variable_data / "sec_fraction_report.csv",)
 
-
     # plot BLI runs
     bli_data = load_bli_dataset(save_dir_wetlab_bli)
+    plot_configs = []
 
-    # first runs (V1, 13, 13)
-    for variant in ["V1", "V12", "V13",]:
-        plot_bli_runs(
-            bli_data=bli_data,
-            date="2026-07-27",
-            run_names=[
-                "mClover_PBS-Tween_0.025",
-                f"mClover{variant}_alone_0.200",
-                f"mClover{variant}_mClover_0.200",],
-            run_display_names=[
-                "mClover Baseline",
-                f"mClover{variant} Baseline",
-                f"mClover{variant} Binding Signal",],
-            save_path=(save_dir_wet_lab_plots / f"BLI_{variant}.png"),
-            title=f"BLI of mClover{variant} (0.200 mg/ml)",)
+    # 1. First runs (V1, 12, 13)
+    for variant in ["V1", "V12", "V13"]:
+        plot_configs.append({
+            "date": "2026-07-27",
+            "run_names": ["mClover_PBS-Tween_0.025", f"mClover{variant}_alone_0.200", f"mClover{variant}_mClover_0.200"],
+            "display_names": ["mClover Baseline", f"mClover{variant} Baseline", f"mClover{variant} Binding Signal"],
+            "save_name": f"BLI_{variant}.png",
+            "title": f"BLI of mClover{variant} (0.2 mg/ml)"})
 
-    # V13 experiments repetition
-    special_case_bli = [{
-        "date": "2026-07-28",
-        "run_names": [
-            "mClover_controll",
-            "mCloverV13_alone",
-            "mCloverV13_mClover", ],
-        "save_name": "BLI_V13_2_0.05.png",
-        "title": "BLI mCloverV13 (0.05 mg/ml)", },
+    # 2. V13 experiments repetition
+    plot_configs.extend([
+        {
+            "date": "2026-07-28",
+            "run_names": ["mClover_controll", "mCloverV13_alone", "mCloverV13_mClover"],
+            "display_names": ["mClover Baseline", "mCloverV13 Baseline", "mCloverV13 Binding Signal"],
+            "save_name": "BLI_V13_2_0.05.png",
+            "title": "BLI mCloverV13 (0.05 mg/ml)"},
         {
             "date": "2026-07-30",
-            "run_names": [
-                "mClover_PBS-Tween_0.025",
-                "mCloverV13_alone_0.200",
-                "mCloverV13_mClover_0.200", ],
+            "run_names": ["mClover_PBS-Tween_0.025", "mCloverV13_alone_0.200", "mCloverV13_mClover_0.200"],
+            "display_names": ["mClover Baseline", "mCloverV13 Baseline", "mCloverV13 Binding Signal"],
             "save_name": "BLI_V13_3.png",
-            "title": "BLI mCloverV13 (0.200 mg/ml)", },
+            "title": "BLI mCloverV13 (0.2 mg/ml)"},
         {
             "date": "2026-08-03",
-            "run_names": [
-                "mClover_PBS_0.025",
-                "mCloverV13_alone_0.200",
-                "mCloverV13_mClover_0.200", ],
+            "run_names": ["mClover_PBS_0.025", "mCloverV13_alone_0.200", "mCloverV13_mClover_0.200"],
+            "display_names": ["mClover Baseline", "mCloverV13 Baseline", "mCloverV13 Binding Signal"],
             "save_name": "BLI_V13_4.png",
-            "title": "BLI mCloverV13 (0.200 mg/ml)", },]
+            "title": "BLI mCloverV13 (0.2 mg/ml)"}
+    ])
 
-    for cfg in special_case_bli:
+    # 3. Positive and negative references (data from 03.0. wrong conc)
+    c_nM = 100
+    mw_aGNb53nt = 13290
+    conc_mg_ml_aGNb53nt = c_nM * 1e-9 * mw_aGNb53nt
+    references = [
+        ("aGNb53nt", f"{conc_mg_ml_aGNb53nt:.3f} mg/ml", "aGNb53nt_100nM"),
+        ("NoKnob", "0.2 mg/ml", "NoKnob"),
+        ("mCloverV14", "0.2 mg/ml", "mCloverV14")]
+    for fab, conc, save_suffix in references:
+        plot_configs.append({
+            "date": "2026-08-11",
+            "run_names": ["mClover_PBS", f"{fab}_alone", f"{fab}_mClover"],
+            "display_names": ["mClover Baseline", f"{fab} Baseline", f"{fab} Binding Signal"],
+            "save_name": f"BLI_{save_suffix}.png",
+            "title": f"BLI of {fab} ({conc})"})
+
+    # 4. V14 and GNb53nt repetition
+    c_nM = 500
+    conc_mg_ml_aGNb53nt = c_nM * 1e-9 * mw_aGNb53nt
+    runs = [
+        ("mCloverV14_2", "mCloverV14 (0.2 mg/ml)", "mCloverV14_alone", "mCloverV14_mClover", "mCloverV14_2"),
+        ("aGNb53nt", "aGNb53nt (0.025 mg/ml)", "GNb53nt_alone_0", "GNb53nt_mClover_0", "aGNb53nt_0.025"),
+        ("aGNb53nt", f"aGNb53nt ({conc_mg_ml_aGNb53nt:.3f} mg/ml)", "GNb53nt_alone_500nM", "GNb53nt_mClover_500nM", "aGNb53nt_500nM")]
+    for label, title, baseline_run, binding_run, save_suffix in runs:
+        plot_configs.append({
+            "date": "2026-08-12",
+            "run_names": ["mClover_PBS", baseline_run, binding_run],
+            "display_names": ["mClover Baseline", f"{label} Baseline", f"{label} Binding Signal"],
+            "save_name": f"BLI_{save_suffix}.png",
+            "title": f"BLI of {title}"})
+
+    # actual plotting
+    for cfg in plot_configs:
         plot_bli_runs(
             bli_data=bli_data,
             date=cfg["date"],
             run_names=cfg["run_names"],
-            run_display_names=[
-                "mClover Baseline",
-                f"mCloverV13 Baseline",
-                f"mCloverV13 Binding Signal", ],
+            run_display_names=cfg["display_names"],
             save_path=save_dir_wet_lab_plots / cfg["save_name"],
-            title=cfg["title"], )
+            title=cfg["title"],)
 
-    # positive and negative references
-    for Fab in ["aGNb53nt", "NoKnob", "mCloverV14",]:
-        plot_bli_runs(
-            bli_data=bli_data,
-            date="2026-08-11",
-            run_names=[
-                "mClover_PBS",
-                f"{Fab}_alone",
-                f"{Fab}_mClover",],
-            run_display_names=[
-                "mClover Baseline",
-                f"{Fab} Baseline",
-                f"{Fab} Binding Signal",],
-            save_path=(save_dir_wet_lab_plots / f"BLI_{Fab}.png"),
-            title=f"BLI of {Fab}",)
-
-    # V14 and GNb53nt repetition
-    runs = [
-        ("mCloverV14_2", "mCloverV14 (0,2 mg/ml)" ,"mCloverV14_alone", "mCloverV14_mClover",),
-        ("GNb53nt", "GNb53nt (0.025 m/ml)", "GNb53nt_alone_0", "GNb53nt_mClover_0",),
-        ("GNb53nt", "GNb53nt (500nM)" , "GNb53nt_alone_500nM", "GNb53nt_mClover_500nM",),]
-
-    for label, title, baseline_run, binding_run in runs:
-        plot_bli_runs(
-            bli_data=bli_data,
-            date="2026-08-12",
-            run_names=[
-                "mClover_PBS",
-                baseline_run,
-                binding_run,],
-            run_display_names=[
-                "mClover Baseline",
-                f"{label} Baseline",
-                f"{label} Binding Signal",],
-            save_path=(save_dir_wet_lab_plots / f"BLI_{label}.png"),
-            title=f"BLI of {title}",)
-
-    # plot only assocciation phase
+    # only association phase
     plot_bli_phase_runs(
         bli_data=bli_data,
         runs=[
@@ -888,22 +869,24 @@ if wet_lab_analysis_bool:
             ("2026-08-11", "mCloverV14_mClover"),
             ("2026-08-11", "NoKnob_mClover"),
             ("2026-08-11", "aGNb53nt_mClover"),],
-        phases=["Association",],
-        subtract_baseline={
-            "2026-07-27": "mClover_PBS-Tween_0.025",
-            "2026-07-27": "mClover_PBS-Tween_0.025",
-            "2026-08-03": "mClover_PBS_0.025",
-            "2026-08-11": "mClover_PBS",
-            "2026-08-11": "mClover_PBS",
-            "2026-08-11": "mClover_PBS"},
+        phases=["Association"],
+        subtract_baseline=[
+            ("2026-07-27", "mClover_PBS-Tween_0.025"),
+            ("2026-07-27", "mClover_PBS-Tween_0.025"),
+            ("2026-08-03", "mClover_PBS_0.025"),
+            ("2026-08-11", "mClover_PBS"),
+            ("2026-08-11", "mClover_PBS"),
+            ("2026-08-11", "mClover_PBS"),],
         run_display_names=[
-            "mCloverV1 Ass. Phase",
-            "mCloverV12 Ass. Phase",
-            "mCloverV13 Ass. Phase",
-            "mCloverV14 Ass. Phase",
-            "NoKnob-Fab Ass. Phase",
-            "aGNb53nt Ass. Phase",],
-        save_path=save_dir_wet_lab_plots / "BLI_all_ass.png",)
+            "mCloverV1 (0.2 mg/ml)",
+            "mCloverV12 (0.2 mg/ml)",
+            "mCloverV13 (0.2 mg/ml)",
+            "mCloverV14 (0.2 mg/ml)",
+            "NoKnob-Fab (0.2 mg/ml)",
+            f"aGNb53nt ({conc_mg_ml_aGNb53nt:.3f} mg/ml)",],
+        save_path=save_dir_wet_lab_plots / "BLI_all_ass.png",
+    )
+
 
 
     # plot SUPR-DSF runs
@@ -945,18 +928,21 @@ if wet_lab_analysis_bool:
             title=f"{variant} dBCM",)
 
 
+
     # plot SEC-MALS data
     sec_mals_data = load_sec_mals_data(save_dir_wetlab_sec_mals)
 
     plot_sec_mals_uv_mw(
         sec_mals_data=sec_mals_data,
         samples=["V1", "V12", "V13", "V14", "BSA"],
+        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14", "BSA"],
         show_uv=True,
         show_mw=False,
         save_path=save_dir_wet_lab_plots / "SEC_MALS_UV.png", )
     sec_mals_mw = plot_sec_mals_uv_mw(
         sec_mals_data=sec_mals_data,
         samples=["V1", "V12", "V13", "V14", "BSA"],
+        run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14", "BSA"],
         show_uv=False,
         show_mw=True,
         save_path=save_dir_wet_lab_plots / "SEC_MALS_MW.png", )

@@ -1089,12 +1089,15 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], run_display_n
 
 
 def plot_bli_phase_runs(bli_data: dict, runs: list[tuple[str, str]], phases: list[str],
-                        run_display_names: list[str] | None = None, subtract_baseline: dict[str, str] | None = None,
+                        run_display_names: list[str] | None = None, subtract_baseline: list[tuple[str, str]] | None = None,
                         save_path=None, title: str | None = None,
 ):
     if run_display_names is not None:
         if len(run_display_names) != len(runs):
             raise ValueError("run_display_names must have the same length as runs.")
+    if subtract_baseline is not None:
+        if len(subtract_baseline) != len(runs):
+            raise ValueError("subtract_baseline must have the same length as runs.")
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -1126,31 +1129,25 @@ def plot_bli_phase_runs(bli_data: dict, runs: list[tuple[str, str]], phases: lis
         mask = np.zeros(len(df), dtype=bool,)
 
         for start, end in phase_intervals:
-            mask |= (
-                    (df["Time (s)"] >= start)
-                    &
-                    (df["Time (s)"] <= end)
-            )
+            mask |= ((df["Time (s)"] >= start) & (df["Time (s)"] <= end))
 
         df_plot = df.loc[mask].copy()
-        baseline_df = None
 
         if subtract_baseline is not None:
-            if date not in subtract_baseline:
-                raise KeyError(f"No baseline defined for {date}.")
+            baseline_date, baseline_name = subtract_baseline[i]
 
-            baseline_name = subtract_baseline[date]
+            if baseline_date not in bli_data:
+                raise KeyError(f"Baseline date '{baseline_date}' not found.")
+            if baseline_name not in bli_data[baseline_date]["runs"]:
+                raise KeyError(f"Baseline run '{baseline_name}' not found for date '{baseline_date}'.")
 
-            if (baseline_name not in bli_data[date]["runs"]):
-                raise KeyError(f"Baseline run '{baseline_name}' not found for date '{date}'.")
-
-            baseline_df = (bli_data[date]["runs"][baseline_name])
+            baseline_df = bli_data[baseline_date]["runs"][baseline_name]
 
             baseline_values = np.interp(
                 df_plot["Time (s)"],
                 baseline_df["Time (s)"],
                 baseline_df["Binding (nm)"],)
-            df_plot["Binding (nm)"] -= (baseline_values)
+            df_plot["Binding (nm)"] -= baseline_values
 
         ax.plot(
             df_plot["Time (s)"],
@@ -1160,12 +1157,13 @@ def plot_bli_phase_runs(bli_data: dict, runs: list[tuple[str, str]], phases: lis
             label=label, )
 
     ax.set_xlabel("Time [s]")
+    ax.set_xlim(300, 660)
     ax.set_ylabel("Binding [nm]")
 
     if title is not None:
         ax.set_title(title)
     else:
-        ax.set_title("BLI phase comparison")
+        ax.set_title("BLI Association Phase Comparison")
 
     ax.legend()
     ax.grid(alpha=0.3)
@@ -1746,8 +1744,8 @@ def load_sec_mals_data(save_dir_wet_lab_sec_mals: str | Path,
     return data
 
 
-def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, show_uv: bool = True, show_mw: bool = True,
-                  save_path=None, title: str | None = None,
+def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, run_display_names: list[str] | None = None,
+                        show_uv: bool = True, show_mw: bool = True, save_path=None, title: str | None = None,
 ):
     """
     Plot SEC-MALS chromatograms and/or MALS mass profiles.
@@ -1775,6 +1773,13 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
 
     if not show_uv and not show_mw:
         raise ValueError("At least one of show_uv or show_mw must be True.")
+
+    if run_display_names is not None:
+        if len(run_display_names) != len(samples):
+            raise ValueError("run_display_names must have the same length as samples.")
+        label_map = dict(zip(samples, run_display_names))
+    else:
+        label_map = {s: s for s in samples}
 
     fig, ax_uv = plt.subplots(figsize=(9, 5))
     ax_mw = None
@@ -1825,10 +1830,10 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
             ax_uv.plot(
                 valid[time_column],
                 valid[uv_column],
-                color=get_variant_color(sample),
+                color=get_variant_color(label_map[sample]),
                 linewidth=2,
                 linestyle="-",
-                label=sample,)
+                label=label_map[sample],)
 
         ax_uv.set_ylabel("UV Absorbance [%]")
 
@@ -1873,7 +1878,7 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
                     color=(
                         get_variant_color("BSA")
                         if show_uv and sample == "BSA"
-                        else get_variant_color(sample)),
+                        else get_variant_color(label_map[sample])),
                     linestyle="--" if show_uv else "-",
                     linewidth=2,
                     alpha=0.9,)
@@ -1946,9 +1951,9 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, s
         plt.Line2D(
             [0],
             [0],
-            color=get_variant_color(sample),
+            color=get_variant_color(label_map[sample]),
             linewidth=2,
-            label=sample,)
+            label=label_map[sample],)
         for sample in samples]
 
     ax_uv.legend(handles=handles, loc="best",)
