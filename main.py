@@ -108,12 +108,12 @@ run_all_bool = False
 DEBUG = False
 
 general_sequence_analysis_bool = False
-cysteine_sequence_analysis_bool = False
+cysteine_sequence_analysis_bool = True
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
-wet_lab_analysis_bool = True
+wet_lab_analysis_bool = False
 figure_creation_bool = False
 
 show_plot_titles = False
@@ -168,13 +168,20 @@ save_dir_wetlab_supr_dsf = Path(save_dir_wetlab / "SUPR-DSF")
 save_dir_wetlab_sec_mals = Path(save_dir_wetlab / "SEC_MALS")
 
 # ---------------Plot Paths--------------------------
+#general sequence analysis
 name_unique_global_alignment = "unique_global_alignment"
-path_plot_length_distribution = (save_dir_dry_lab_plots / "unique_global_length_vs_sequence.png")
-path_plot_occurrence_distribution = (save_dir_dry_lab_plots / "unique_global_sequence_occurrence.png")
-path_plot_gap_distribution = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_gap_distribution.png")
-path_plot_entropy_distribution = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_entropy_distribution.png")
-path_plot_sequence_logo_no_gaps = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_logo_no_gaps.png")
-path_plot_sequence_logo_with_gaps = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_logo_with_gaps.png")
+path_plot_length_distribution_1st = (save_dir_dry_lab_plots / "unique_global_length_vs_sequence.png")
+path_plot_occurrence_distribution_1st = (save_dir_dry_lab_plots / "unique_global_sequence_occurrence.png")
+path_plot_gap_distribution_1st = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_gap_distribution.png")
+path_plot_entropy_distribution_1st = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_entropy_distribution.png")
+path_plot_sequence_logo_no_gaps_1st = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_logo_no_gaps.png")
+path_plot_sequence_logo_with_gaps_1st = (save_dir_dry_lab_plots / f"{name_unique_global_alignment}_logo_with_gaps.png")
+
+# cysteine sequence analysis
+path_plot_gap_distribution_2nd = (save_dir_dry_lab_plots / "cut_DSATYY_WGXG_unique_vs_structure_picobodies_gap_distribution.png")
+path_plot_entropy_distribution_2nd = (save_dir_dry_lab_plots / "cut_DSATYY_WGXG_unique_vs_structure_picobodies_entropy_distribution.png")
+path_plot_sequence_logo_no_gaps_2nd = (save_dir_dry_lab_plots / "cut_DSATYY_WGXG_unique_vs_structure_picobodies_logo_no_gaps.png")
+path_plot_sequence_logo_with_gaps_2nd = (save_dir_dry_lab_plots / "cut_DSATYY_WGXG_unique_vs_structure_picobodies_logo_with_gaps.png")
 
 # ---------------Initializing--------------------------
 save_dir_variable_data.mkdir(exist_ok=True)
@@ -231,8 +238,8 @@ print(f"Number of potential binders (candidates): {len(candidate_sequences)}")
 # ---------------general sequence analysis--------------------------
 if general_sequence_analysis_bool:
     print("\n--------------------General Sequence analysis--------------------")
-    plot_length_distribution(unique_global, save_path=path_plot_length_distribution, show_title=show_plot_titles)
-    plot_occurrence_distribution(unique_global, save_path=path_plot_occurrence_distribution, show_title=show_plot_titles)
+    plot_length_distribution(unique_global, save_path=path_plot_length_distribution_1st, show_title=show_plot_titles)
+    plot_occurrence_distribution(unique_global, save_path=path_plot_occurrence_distribution_1st, show_title=show_plot_titles)
 
     alignment_path = run_clustalw_alignment_from_fasta(
         fasta_files=[(save_dir_variable_data /"unique_global.fasta")],
@@ -240,12 +247,12 @@ if general_sequence_analysis_bool:
         output_dir=save_dir_variable_data,
         output_prefix=name_unique_global_alignment)
 
-    plot_gap_distribution(alignment_path, save_path=path_plot_gap_distribution, show_title=show_plot_titles)
-    plot_entropy_distribution(alignment_path, save_path=path_plot_entropy_distribution, show_title=show_plot_titles)
+    plot_gap_distribution(alignment_path, save_path=path_plot_gap_distribution_1st, show_title=show_plot_titles)
+    plot_entropy_distribution(alignment_path, save_path=path_plot_entropy_distribution_1st, show_title=show_plot_titles)
     plot_sequence_logo(alignment_path, include_gaps=False, plot_title="Logo of Global Unique Sequences",
-                       save_path=path_plot_sequence_logo_no_gaps)
+                       save_path=path_plot_sequence_logo_no_gaps_1st)
     plot_sequence_logo(alignment_path, include_gaps=True, plot_title="Logo of Global Unique Sequences (with gaps)", size="small",
-                       save_path=path_plot_sequence_logo_with_gaps, show_title=show_plot_titles)
+                       save_path=path_plot_sequence_logo_with_gaps_1st, show_title=show_plot_titles)
 
 # ---------------cystein sequence analysis--------------------------
 if cysteine_sequence_analysis_bool:
@@ -265,10 +272,10 @@ if cysteine_sequence_analysis_bool:
         output_dir=save_dir_variable_data,
         output_prefix="cut_DSATYY_WGXG_unique_vs_structure_picobodies")
 
-    plot_gap_distribution(alignment_path, save_dir_dry_lab_plots)
-    plot_entropy_distribution(alignment_path, save_dir_dry_lab_plots)
-    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=False, plot_title="Logo of Cut Global Unique Sequences")
-    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=True, plot_title="Logo of Cut Global Unique Sequences (with gaps)")
+    plot_gap_distribution(alignment_path, path_plot_gap_distribution_2nd)
+    plot_entropy_distribution(alignment_path, path_plot_entropy_distribution_2nd)
+    plot_sequence_logo(alignment_path, path_plot_sequence_logo_no_gaps_2nd, include_gaps=False, plot_title="Logo of Cut Global Unique Sequences")
+    plot_sequence_logo(alignment_path, path_plot_sequence_logo_with_gaps_2nd, include_gaps=True, plot_title="Logo of Cut Global Unique Sequences (with gaps)")
     print(f"Plots for {alignment_path} with the gap distribution, the entropy distribution and the logos (with and without gaps) were saved.\n")
 
     # from previously aligned knobs, isolate knob-domain and compare again
