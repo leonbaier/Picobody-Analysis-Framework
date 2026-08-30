@@ -2127,11 +2127,7 @@ def export_dataframe_to_latex(df: pd.DataFrame, csv_path, latex_path, caption: s
         f.write(f"\\caption{{{caption}}}\n")
         f.write(f"\\label{{{label}}}\n")
 
-        f.write(
-            "\\begin{tabular}{l"
-            + "r" * len(columns)
-            + "}\n"
-        )
+        f.write("\\begin{tabularx}{\\textwidth}{c" + "C" * len(columns) + "}\n")
 
         f.write("\\hline\n")
         header = (latex_escape(index_name)+ " & " + " & ".join(latex_escape(col) for col in columns))
@@ -2145,7 +2141,9 @@ def export_dataframe_to_latex(df: pd.DataFrame, csv_path, latex_path, caption: s
             for value in row:
                 if pd.isna(value):
                     values.append("")
-                elif isinstance(value, (int, float)):
+                elif isinstance(value, int) and not isinstance(value, bool):
+                    values.append(str(value))
+                elif isinstance(value, float):
                     values.append(f"{value:.2f}")
                 else:
                     values.append(latex_escape(value))
@@ -2158,11 +2156,11 @@ def export_dataframe_to_latex(df: pd.DataFrame, csv_path, latex_path, caption: s
             )
 
         f.write("\\hline\n")
-        f.write("\\end{tabular}\n")
+        f.write("\\end{tabularx}\n")
         f.write("\\end{table}\n")
 
 
-def export_sec_mals_summary_table(sec_mals_data: dict, save_dir_variable_data,
+def export_sec_mals_summary_table(sec_mals_data: dict, csv_folder: Path, latex_folder: Path,
 ) -> pd.DataFrame:
     """
     Export SEC-MALS summary table for thesis use.
@@ -2227,8 +2225,8 @@ def export_sec_mals_summary_table(sec_mals_data: dict, save_dir_variable_data,
     print("\nSEC-MALS Summary")
     print(summary)
 
-    csv_path = (Path(save_dir_variable_data) / "SEC_MALS_summary.csv")
-    latex_path = (Path(save_dir_variable_data) / "SEC_MALS_summary.tex")
+    csv_path = (csv_folder / "SEC_MALS_summary.csv")
+    latex_path = (latex_folder / "SEC_MALS_summary.tex")
 
     export_dataframe_to_latex(
         df=summary,

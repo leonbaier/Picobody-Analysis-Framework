@@ -16,7 +16,9 @@ from sklearn.metrics import silhouette_score, adjusted_rand_score
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster, cophenet
 from scipy.spatial.distance import pdist
 from scipy.spatial.distance import squareform
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
+
+from wet_lab_analysis import export_dataframe_to_latex
 
 
 
@@ -203,9 +205,7 @@ def process_alignment_by_conserved_c_positions(aln_path: Path, output_dir: Path,
         seq_aln = str(record.seq)
 
         # count AA between the two C positions (exclude gaps)
-        aa_between = sum(
-            1 for aa in seq_aln[c_left + 1: c_right] if aa != "-"
-        )
+        aa_between = sum(1 for aa in seq_aln[c_left + 1: c_right] if aa != "-")
 
         # cut RIGHT part: everything AFTER second C
         right_part = seq_aln[c_right:]
@@ -377,7 +377,9 @@ def deduplicate_and_filter_fasta(input_fasta: Path, output_fasta: Path, max_aa_d
         "removed": removed_records,}
 
 
-def evaluate_dedup_thresholds(input_fasta: Path, diff_range: range):
+def evaluate_dedup_thresholds(input_fasta: Path | str,  diff_range: range,  csv_path: Path | str = "dedup_results.csv",
+                              latex_path: Path | str = "dedup_results.tex"
+):
     """
     Evaluate different max_aa_difference thresholds and print statistics.
     """
@@ -406,6 +408,19 @@ def evaluate_dedup_thresholds(input_fasta: Path, diff_range: range):
     for diff, exact, near, kept in results:
         print(f"{diff:>8} | {exact:>6} | {near:>6} | {kept:>6}")
     print("Recommendation: choose based on diversity vs redundancy trade-off:")
+
+    df = pd.DataFrame(results, columns=["Threshold (Dist.)", "Exact Duplicates", "Near Duplicates", "Kept Sequences"])
+    df.set_index("Threshold (Dist.)", inplace=True)
+
+    export_dataframe_to_latex(
+        df=df,
+        csv_path=csv_path,
+        latex_path=latex_path,
+        caption="Evaluation of Levenshtein distance thresholds for sequence deduplication.",
+        label="tab:dedup_thresholds",
+        index_name="Threshold (Dist.)")
+
+    print(f"\n[+] Results successfully exported to '{latex_path}' and '{csv_path}'.")
 
 
 def cysteine_clustering(aln_path: Path, output_dir: Path, output_prefix: str, n_ignore: int = 0,

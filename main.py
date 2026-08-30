@@ -104,7 +104,7 @@ from figure_creation import (
 
 
 # ---------------Switches-----------------------
-run_all_bool = False
+run_all_bool = True
 DEBUG = False
 
 general_sequence_analysis_bool = False
@@ -157,6 +157,8 @@ save_dir_wetlab = Path(save_dir_data / "wet_lab_results")
 save_dir_thesis_figures = Path(save_dir_data / "thesis_figures")
 save_dir_maestro = Path(r"\\nas.ads.mwn.de\ge63laz\TUM-PC\Desktop\Masterthesis_Picobodies\Maestro_Pred_Strc_Picobodies")
 
+save_dir_tables_gen = Path(save_dir_variable_data / "tab_generated")
+
 save_dir_esm = Path(save_dir_structure_prediction / "esm_fold")
 save_dir_boltz = Path(save_dir_structure_prediction / "boltz2")
 save_dir_af = Path(save_dir_structure_prediction / "af3")
@@ -182,6 +184,12 @@ path_plot_gap_distribution_2nd = (save_dir_dry_lab_plots / "cut_DSATYY_WGXG_uniq
 path_plot_entropy_distribution_2nd = (save_dir_dry_lab_plots / "cut_DSATYY_WGXG_unique_vs_structure_picobodies_entropy_distribution.png")
 path_plot_sequence_logo_no_gaps_2nd = (save_dir_dry_lab_plots / "cut_DSATYY_WGXG_unique_vs_structure_picobodies_logo_no_gaps.png")
 path_plot_sequence_logo_with_gaps_2nd = (save_dir_dry_lab_plots / "cut_DSATYY_WGXG_unique_vs_structure_picobodies_logo_with_gaps.png")
+
+path_plot_gap_distribution_3rd = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_vs_structure_picobodies_gap_distribution.png")
+path_plot_entropy_distribution_3rd = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_vs_structure_picobodies_entropy_distribution.png")
+path_plot_sequence_logo_no_gaps_3rd = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_vs_structure_picobodies_logo_no_gaps.png")
+path_plot_sequence_logo_with_gaps_3rd = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_vs_structure_picobodies_logo_with_gaps.png")
+
 
 # ---------------Initializing--------------------------
 save_dir_variable_data.mkdir(exist_ok=True)
@@ -285,7 +293,11 @@ if cysteine_sequence_analysis_bool:
         output_suffix="unique") # add "cut_knobs_" and ".fasta"
 
     # filter sequences (exact + near diff)
-    evaluate_dedup_thresholds((save_dir_variable_data / "cut_knobs_unique.fasta"), diff_range=range(0, 5))
+    evaluate_dedup_thresholds(
+        input_fasta = save_dir_variable_data / "cut_knobs_unique.fasta",
+        diff_range =range(0, 5),
+        csv_path= save_dir_variable_data / "dedup_results.csv",
+        latex_path= save_dir_tables_gen / "dedup_results.tex",)
     dedup_report = deduplicate_and_filter_fasta(
         input_fasta=save_dir_variable_data / "cut_knobs_unique.fasta",
         output_fasta=save_dir_variable_data / "cut_knobs_unique_deduplicated.fasta",
@@ -301,12 +313,11 @@ if cysteine_sequence_analysis_bool:
         output_dir=save_dir_variable_data,
         output_prefix="cut_deduplicated_knobs_unique_vs_structure_picobodies")
 
-    plot_gap_distribution(alignment_path, save_dir_dry_lab_plots)
-    plot_entropy_distribution(alignment_path, save_dir_dry_lab_plots)
-    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=False, plot_title="Logo with Isolated Knobs of Global Unique Sequences")
-    plot_sequence_logo(alignment_path, save_dir_dry_lab_plots, include_gaps=True, plot_title="Logo with Isolated Knobs of Global Unique Sequences (with gaps)")
-    print(
-        f"Plots for {alignment_path} with the gap distribution, the entropy distribution and the logos (with and without gaps) were saved.\n")
+    plot_gap_distribution(alignment_path, path_plot_gap_distribution_3rd)
+    plot_entropy_distribution(alignment_path, path_plot_entropy_distribution_3rd)
+    plot_sequence_logo(alignment_path, path_plot_sequence_logo_no_gaps_3rd, include_gaps=False, plot_title="Logo with Isolated Knobs of Global Unique Sequences")
+    plot_sequence_logo(alignment_path, path_plot_sequence_logo_with_gaps_3rd, include_gaps=True, plot_title="Logo with Isolated Knobs of Global Unique Sequences (with gaps)")
+    print(f"Plots for {alignment_path} with the gap distribution, the entropy distribution and the logos (with and without gaps) were saved.\n")
 
     # cysteine clustering with only knobs
     print("Cysteine clustering with only knobs:")
@@ -963,11 +974,12 @@ if wet_lab_analysis_bool:
     mw_comparsion = export_mw_comparison_table(sec_mals_mw=sec_mals_mw,
                                                theoretical_mw=theoretical_mw,
                                                ms_mw =ms_mw,
-                                               save_dir=save_dir_variable_data)
+                                               save_dir=save_dir_tables_gen)
     mw_comparsion.to_csv(save_dir_variable_data / "mw_comparison.csv", index=False)
     sec_mals_summary = export_sec_mals_summary_table(
         sec_mals_data=sec_mals_data,
-        save_dir_variable_data=save_dir_variable_data,)
+        csv_folder=save_dir_variable_data,
+        latex_folder=save_dir_tables_gen,)
 
 
 
@@ -976,11 +988,11 @@ if figure_creation_bool:
     create_composite_figure(
         output_file=(save_dir_thesis_figures / "Figure_1.png"),
         images={
-            "A": path_plot_length_distribution,
-            "B": path_plot_occurrence_distribution,
-            "C": path_plot_gap_distribution,
-            "D": path_plot_entropy_distribution,
-            "E": path_plot_sequence_logo_with_gaps,},
+            "A": path_plot_length_distribution_1st,
+            "B": path_plot_occurrence_distribution_1st,
+            "C": path_plot_gap_distribution_1st,
+            "D": path_plot_entropy_distribution_1st,
+            "E": path_plot_sequence_logo_with_gaps_1st,},
         layout=
         """
         AB
@@ -999,8 +1011,11 @@ if figure_creation_bool:
 print("\n--------------------Runtime--------------------")
 end_time_main = time.time()
 elapsed_main = end_time_main - start_time_main
-print(f"\033[92m✔ Script finished with a total runtime of {elapsed_main:.1f} seconds\033[0m")
 
+hours, remainder = divmod(elapsed_main, 3600)
+minutes, seconds = divmod(remainder, 60)
+
+print(f"\033[92m✔ Script finished with a total runtime of {int(hours)}h {int(minutes)}min {seconds:.1f}s\033[0m")
 
 
 
