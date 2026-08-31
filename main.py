@@ -104,7 +104,7 @@ from figure_creation import (
 
 
 # ---------------Switches-----------------------
-run_all_bool = True
+run_all_bool = False
 DEBUG = False
 
 general_sequence_analysis_bool = False
@@ -189,6 +189,21 @@ path_plot_gap_distribution_3rd = (save_dir_dry_lab_plots / "cut_deduplicated_kno
 path_plot_entropy_distribution_3rd = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_vs_structure_picobodies_entropy_distribution.png")
 path_plot_sequence_logo_no_gaps_3rd = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_vs_structure_picobodies_logo_no_gaps.png")
 path_plot_sequence_logo_with_gaps_3rd = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_vs_structure_picobodies_logo_with_gaps.png")
+
+path_dendrogram_wo_knobs = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_cysteine_clustering_dendrogram.png")
+path_cluster_logo_wo_knobs_chemistry = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_cluster_logos_with_gaps_chemistry.png")
+path_cluster_logo_wo_knobs_highlight_C = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_cluster_logos_with_gaps_highlight_C.png")
+
+path_dendrogram_with_knobs = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_vs_structure_picobodies_cysteine_clustering_dendrogram_display_ids.png.png")
+path_cluster_logo_with_knobs_chemistry = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_vs_structure_picobodies_cluster_logos_with_gaps_chemistry.png")
+path_cluster_logo_with_knobs_highlight_C = (save_dir_dry_lab_plots / "cut_deduplicated_knobs_unique_vs_structure_picobodies_cluster_logos_with_gaps_highlight_C.png")
+
+path_cysteine_heatmap = (save_dir_dry_lab_plots / "cysteine_position_heatmap_cut_deduplicated_knobs_unique_vs_structure_picobodies.png")
+path_cysteine_violin = (save_dir_dry_lab_plots / "cysteine_spacing_violin_cut_deduplicated_knobs_unique_vs_structure_picobodies.png")
+
+# structure prediction
+
+
 
 
 # ---------------Initializing--------------------------
@@ -322,20 +337,18 @@ if cysteine_sequence_analysis_bool:
     # cysteine clustering with only knobs
     print("Cysteine clustering with only knobs:")
     clusters, _, _, _, _ = cysteine_clustering(aln_path=Path(save_dir_variable_data /"cut_deduplicated_knobs_unique_vs_structure_picobodies.aln"),
-                        output_dir=Path(save_dir_dry_lab_plots),
-                        output_prefix="cut_deduplicated_knobs_unique",
+                        fig_path= path_dendrogram_wo_knobs,
                         n_ignore = 32,
                         cluster_range = range(2,10),
                         debug=DEBUG)
-    plot_cluster_logos(clusters, save_dir_dry_lab_plots, output_prefix="cut_deduplicated_knobs_unique", include_gaps = True)
-    plot_cluster_logos(clusters, save_dir_dry_lab_plots, output_prefix="cut_deduplicated_knobs_unique", include_gaps = True, highlight_aa="C")
+    plot_cluster_logos(clusters,  path_cluster_logo_wo_knobs_chemistry, include_gaps = True)
+    plot_cluster_logos(clusters,  path_cluster_logo_wo_knobs_highlight_C, include_gaps = True, highlight_aa="C")
 
     # cystein clustering with knobs + experimental structures
     print("\nCysteine clustering with knobs + experimental structures:")
     clusters, Z, ids, near_knobs_to_knobs, knob_ids = cysteine_clustering(
         aln_path=Path(save_dir_variable_data / "cut_deduplicated_knobs_unique_vs_structure_picobodies.aln"),
-        output_dir=Path(save_dir_dry_lab_plots),
-        output_prefix=f"cut_deduplicated_knobs_unique_vs_structure_picobodies",
+        fig_path= path_dendrogram_with_knobs,
         n_ignore=0,
         cluster_range=range(2, 20),
         highlight_mode="first_n",
@@ -346,24 +359,23 @@ if cysteine_sequence_analysis_bool:
     save_clusters(clusters, save_dir_variable_data / "clusters.pkl")
     export_clusters_to_txt(clusters, save_dir_variable_data / "clusters_full_table.txt", truncate_seq=False)
 
-    plot_cluster_logos(clusters, save_dir_dry_lab_plots, output_prefix="cut_deduplicated_knobs_unique_vs_structure_picobodies", include_gaps=True)
-    plot_cluster_logos(clusters, save_dir_dry_lab_plots, output_prefix="cut_deduplicated_knobs_unique_vs_structure_picobodies", include_gaps=True,
-                       highlight_aa="C")
+    plot_cluster_logos(clusters, path_cluster_logo_with_knobs_chemistry, include_gaps=True)
+    plot_cluster_logos(clusters,  path_cluster_logo_with_knobs_highlight_C, include_gaps=True,highlight_aa="C")
+
     cluster_summary_to_latex(
         clusters=clusters,
         output_tex_path=(save_dir_variable_data / "cluster_summary_cysteine_topology_cut_deduplicated_knobs_unique_vs_structure_picobodies.tex"))
     plot_cysteine_position_heatmap(
         clusters=clusters,
-        save_path=(save_dir_dry_lab_plots / "cysteine_position_heatmap_cut_deduplicated_knobs_unique_vs_structure_picobodies.png"))
+        save_path=path_cysteine_heatmap)
     plot_cysteine_spacing_violin(
         clusters=clusters,
-        save_path=save_dir_dry_lab_plots / "cysteine_spacing_violin_cut_deduplicated_knobs_unique_vs_structure_picobodies.png")
+        save_path=path_cysteine_violin)
 
     identity_results = compute_sequence_identity_matrix(
         alignment_path=save_dir_variable_data / "cut_deduplicated_knobs_unique_vs_structure_picobodies.aln",
         near_knobs_to_knobs=near_knobs_to_knobs,
         debug=DEBUG)
-
     export_full_knob_excel(
         near_knobs_to_knobs=near_knobs_to_knobs,
         clusters=clusters,

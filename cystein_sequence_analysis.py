@@ -423,11 +423,11 @@ def evaluate_dedup_thresholds(input_fasta: Path | str,  diff_range: range,  csv_
     print(f"\n[+] Results successfully exported to '{latex_path}' and '{csv_path}'.")
 
 
-def cysteine_clustering(aln_path: Path, output_dir: Path, output_prefix: str, n_ignore: int = 0,
+def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
                         cluster_range: range = range(2, 10), highlight_mode: str = "none", highlight_n: int = 0,
                         negative_binder_ids: Optional[Dict[str, Dict]] = None, near_knob_similarity_factor: float = 0.4,
                         debug: bool = False
-                        ) -> tuple[dict[int, dict], np.ndarray, list[str], dict[str, list[str]], set[str]]:
+) -> tuple[dict[int, dict], np.ndarray, list[str], dict[str, list[str]], set[str]]:
     """
     Perform hierarchical clustering of sequences based on cysteine (C) patterns.
     Method:
@@ -687,10 +687,7 @@ def cysteine_clustering(aln_path: Path, output_dir: Path, output_prefix: str, n_
 
     # --- legend ---
     legend_elements = [
-        Patch(
-            facecolor=cluster_to_color[c],
-            label=f"Cluster {c + 1} (n={len(clusters[c]['sequences'])})"
-        )
+        Patch(facecolor=cluster_to_color[c], label=f"Cluster {c + 1} (n={len(clusters[c]['sequences'])})")
         for c in sorted(unique_clusters)]
 
     highlight_legend = [
@@ -708,7 +705,6 @@ def cysteine_clustering(aln_path: Path, output_dir: Path, output_prefix: str, n_
         fontsize=8)
 
     # --- save figure ---
-    fig_path = output_dir / f"{output_prefix}_cysteine_clustering_dendrogram.png"
     plt.savefig(fig_path, dpi=300)
     plt.close()
     print(f"Dendrogram written to: {fig_path}")
@@ -727,7 +723,6 @@ def cysteine_clustering(aln_path: Path, output_dir: Path, output_prefix: str, n_
     display_labels = []
 
     for seq_id in ids:
-
         if seq_id in seq_to_display_id:
             display_labels.append(
                 f"seq {seq_to_display_id[seq_id]}")
@@ -745,31 +740,22 @@ def cysteine_clustering(aln_path: Path, output_dir: Path, output_prefix: str, n_
         leaf_rotation=90,
         leaf_font_size=4,
         color_threshold=0,
-        above_threshold_color="black",
-    )
-
+        above_threshold_color="black",)
     ax = plt.gca()
 
     # --- background cluster shading ---
     leaf_order = ddata_display["leaves"]
-
     ordered_clusters = [best_labels[i] for i in leaf_order]
 
     blocks = []
     start = 0
 
     for i in range(1, len(ordered_clusters)):
-
         if ordered_clusters[i] != ordered_clusters[i - 1]:
-            blocks.append(
-                (start, i - 1, ordered_clusters[i - 1])
-            )
-
+            blocks.append((start, i - 1, ordered_clusters[i - 1]))
             start = i
 
-    blocks.append(
-        (start, len(ordered_clusters) - 1, ordered_clusters[-1])
-    )
+    blocks.append((start, len(ordered_clusters) - 1, ordered_clusters[-1]))
 
     for start, end, cluster in blocks:
         x_start = start * 10
@@ -780,30 +766,19 @@ def cysteine_clustering(aln_path: Path, output_dir: Path, output_prefix: str, n_
             x_end,
             color=cluster_to_color[cluster],
             alpha=0.08,
-            zorder=0,
-        )
+            zorder=0,)
 
-    plt.title(
-        "Hierarchical clustering based on cysteine patterns (display IDs)",
-        fontsize=22,
-        fontweight="bold",
-    )
+    plt.title("Hierarchical clustering based on cysteine patterns (display IDs)", fontsize=22, fontweight="bold",)
 
     plt.xlabel("Display IDs", fontsize=16)
     plt.ylabel("Manhattan distance", fontsize=16)
 
     # --- identical label coloring ---
-    for label, leaf_idx in zip(
-            ax.get_xmajorticklabels(),
-            ddata_display["leaves"],
-    ):
-
+    for label, leaf_idx in zip(ax.get_xmajorticklabels(), ddata_display["leaves"],):
         seq_id = ids[leaf_idx]
 
         if seq_id in knob_ids:
-
             label.set_fontweight("bold")
-
             label.set_bbox(
                 dict(
                     facecolor="lightgray",
@@ -813,7 +788,6 @@ def cysteine_clustering(aln_path: Path, output_dir: Path, output_prefix: str, n_
             )
 
         elif seq_id in negative_binder_id_set:
-
             label.set_bbox(
                 dict(
                     facecolor="lightcoral",
@@ -823,7 +797,6 @@ def cysteine_clustering(aln_path: Path, output_dir: Path, output_prefix: str, n_
             )
 
         elif seq_id in near_knob_ids:
-
             label.set_bbox(
                 dict(
                     facecolor="orange",
@@ -838,14 +811,9 @@ def cysteine_clustering(aln_path: Path, output_dir: Path, output_prefix: str, n_
         handles=legend_elements + highlight_legend,
         title="Legend",
         loc="upper right",
-        fontsize=8,
-    )
+        fontsize=8,)
 
-    fig_path_display = (
-            output_dir /
-            f"{output_prefix}_cysteine_clustering_dendrogram_display_ids.png"
-    )
-
+    fig_path_display = fig_path.parent / f"{fig_path.stem}_display_ids.png"
     plt.savefig(fig_path_display, dpi=300)
 
     plt.close()
@@ -858,22 +826,11 @@ def cysteine_clustering(aln_path: Path, output_dir: Path, output_prefix: str, n_
     return clusters, Z, ids, near_knob_to_knobs, knob_ids
 
 
-def plot_cluster_logos(clusters: dict, save_dir: Path, output_prefix: str, filename: str | None = None, include_gaps: bool = False, highlight_aa: str | None = None
+def plot_cluster_logos(clusters: dict, out_path: Path, filename: str | None = None, include_gaps: bool = False, highlight_aa: str | None = None
 ) -> None:
     """
     Plot sequence logos for each cluster in a stacked multi-panel figure.
     """
-    if filename is None:
-        gap_part = "with_gaps" if include_gaps else "no_gaps"
-
-        if highlight_aa is None:
-            color_part = "chemistry"
-        else:
-            color_part = f"highlight_{highlight_aa}"
-
-        filename = (
-            f"{output_prefix}_cluster_logos_"
-            f"{gap_part}_{color_part}.png")
 
     n_clusters = len(clusters)
     total_sequences = sum(len(c["sequences"]) for c in clusters.values())
@@ -929,8 +886,6 @@ def plot_cluster_logos(clusters: dict, save_dir: Path, output_prefix: str, filen
         y=0.98)
 
     plt.tight_layout(rect=[0, 0, 1, 0.96])
-
-    out_path = save_dir / filename
     plt.savefig(out_path, dpi=300)
     plt.close()
 
