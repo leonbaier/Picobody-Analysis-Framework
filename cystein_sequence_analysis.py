@@ -4,7 +4,7 @@ from pathlib import Path
 from Bio import AlignIO, SeqIO
 from collections import Counter
 import numpy as np
-import pandas as pd # (+ install tabulate)
+import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import logomaker

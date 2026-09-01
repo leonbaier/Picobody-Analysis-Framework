@@ -108,9 +108,9 @@ run_all_bool = False
 DEBUG = False
 
 general_sequence_analysis_bool = False
-cysteine_sequence_analysis_bool = True
-structure_prediction_prep_bool = False
-structure_prediction_analysis_bool = False # does not work if old pdb files are present
+cysteine_sequence_analysis_bool = False
+structure_prediction_prep_bool = True
+structure_prediction_analysis_bool = True # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
 wet_lab_analysis_bool = False
@@ -441,9 +441,7 @@ if structure_prediction_analysis_bool:
             "collector": collect_plddt_stats,
             "collector_chain": collect_esm_chain_models,
             "base_dir": save_dir_esm,
-            "cluster_builder": lambda stats: build_model_to_cluster_from_fasta(
-                save_dir_esm / "esm_input.fasta"
-            ),
+            "cluster_builder": lambda stats: build_model_to_cluster_from_fasta(save_dir_esm / "esm_input.fasta"),
             "suffix_clean": lambda x: x,
             "label": "ESMFold",
         },
@@ -513,7 +511,7 @@ if structure_prediction_analysis_bool:
                 max_residue_len=global_max_len,
                 model_name=f"{cfg['label']} ({ligand_state})")
 
-            # if without mClover, chain-only plddt landscape and then also comparison plddt landscape
+            # if with mClover, chain-only plddt landscape and then also comparison plddt landscape
             if "with_ligand" in run_dir:
                 print(f"------{cfg['label']} ({ligand_state}) CHAIN A------")
 
