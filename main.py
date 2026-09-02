@@ -202,7 +202,27 @@ path_cysteine_heatmap = (save_dir_dry_lab_plots / "cysteine_position_heatmap_cut
 path_cysteine_violin = (save_dir_dry_lab_plots / "cysteine_spacing_violin_cut_deduplicated_knobs_unique_vs_structure_picobodies.png")
 
 # structure prediction
+path_plddt_landscape_esm_simple = save_dir_dry_lab_plots / "plddt_landscape_esmFold_simple_all.png"
+path_plddt_landscape_esm_ligand = save_dir_dry_lab_plots / "plddt_landscape_esmFold_with_ligand_all.png"
+path_plddt_landscape_esm_ligand_chainA = save_dir_dry_lab_plots / "plddt_landscape_esmFold_with_ligand_all_chainA.png"
+path_esm_tested_vs_comp = save_dir_dry_lab_plots / "esm_tested_vs_comparison.png"
+path_esm_tested_vs_comp_mean = save_dir_dry_lab_plots / "esm_tested_vs_comparison_mean.png"
 
+path_plddt_landscape_boltz_simple = save_dir_dry_lab_plots / "plddt_landscape_simple_all.png"
+path_plddt_landscape_boltz_ligand = save_dir_dry_lab_plots / "plddt_landscape_with_ligand_all.png"
+path_plddt_landscape_boltz_ligand_chainA = save_dir_dry_lab_plots / "plddt_landscape_with_ligand_all_chainA.png"
+path_boltz_tested_vs_comp = save_dir_dry_lab_plots / "boltz_tested_vs_comparison.png"
+path_boltz_tested_vs_comp_mean = save_dir_dry_lab_plots / "boltz_tested_vs_comparison_mean.png"
+
+path_plddt_landscape_af3_simple = save_dir_dry_lab_plots / "plddt_landscape_af3_simple_near.png"
+path_plddt_landscape_af3_ligand = save_dir_dry_lab_plots / "plddt_landscape_af3_with_ligand_near.png"
+path_plddt_landscape_af3_ligand_chainA = save_dir_dry_lab_plots / "plddt_landscape_af3_with_ligand_near_chainA.png"
+path_af3_tested_vs_comp = save_dir_dry_lab_plots / "af3_tested_vs_comparison.png"
+path_af3_tested_vs_comp_mean = save_dir_dry_lab_plots / "af3_tested_vs_comparison_mean.png"
+
+path_mean_comp_without_ligand = save_dir_dry_lab_plots / "plddt_mean_comparison_without_ligand.png"
+path_mean_comp_with_ligand = save_dir_dry_lab_plots / "plddt_mean_comparison_with_ligand.png"
+path_mean_comp_with_ligand_chainA = save_dir_dry_lab_plots / "plddt_mean_comparison_with_ligand_chainA.png"
 
 
 
@@ -435,21 +455,21 @@ if structure_prediction_analysis_bool:
     MODEL_CONFIGS = {
         "esm": {
             "runs": [
-                ("esmFold_simple_all", "without ligand"),
-                ("esmFold_with_ligand_all", "with ligand"),
+                ("esmFold_simple_all", "without ligand", path_plddt_landscape_esm_simple, None, None, None),
+                ("esmFold_with_ligand_all", "with ligand", path_plddt_landscape_esm_ligand,
+                 path_plddt_landscape_esm_ligand_chainA, path_esm_tested_vs_comp, path_esm_tested_vs_comp_mean),
             ],
             "collector": collect_plddt_stats,
             "collector_chain": collect_esm_chain_models,
             "base_dir": save_dir_esm,
             "cluster_builder": lambda stats: build_model_to_cluster_from_fasta(save_dir_esm / "esm_input.fasta"),
-            "suffix_clean": lambda x: x,
             "label": "ESMFold",
         },
         "boltz": {
             "runs": [
-                ("boltz_simple_all", "without ligand"),
-                ("boltz_with_ligand_all", "with ligand"),
-            ],
+                ("boltz_simple_all", "without ligand", path_plddt_landscape_boltz_simple, None, None, None),
+                ("boltz_with_ligand_all", "with ligand", path_plddt_landscape_boltz_ligand,
+                 path_plddt_landscape_boltz_ligand_chainA, path_boltz_tested_vs_comp, path_boltz_tested_vs_comp_mean),],
             "collector": lambda d: collect_boltz_best_models(d / "predictions"),
             "collector_chain": lambda d: collect_boltz_chain_models(d / "predictions"),
             "base_dir": save_dir_boltz,
@@ -458,19 +478,18 @@ if structure_prediction_analysis_bool:
                     re.search(r"cluster_?(\d+)", mid).group(1)
                 ) for mid in stats
             },
-            "suffix_clean": lambda x: x.replace("boltz_results_", ""),
             "label": "Boltz-2",
         },
         "af3": {
             "runs": [
-                ("af3_simple_near", "without ligand"),
-                ("af3_with_ligand_near", "with ligand"),
+                ("af3_simple_near", "without ligand", path_plddt_landscape_af3_simple, None, None, None),
+                ("af3_with_ligand_near", "with ligand", path_plddt_landscape_af3_ligand,
+                 path_plddt_landscape_af3_ligand_chainA, path_af3_tested_vs_comp, path_af3_tested_vs_comp_mean),
             ],
             "collector": collect_af_best_models,
             "collector_chain": collect_af_chain_models,
             "base_dir": save_dir_af,
             "cluster_builder": lambda stats: build_af_model_to_cluster(stats, clusters),
-            "suffix_clean": lambda x: x,
             "label": "AlphaFold 3",
         },
     }
@@ -484,7 +503,8 @@ if structure_prediction_analysis_bool:
         subset_without = None
         subset_chain = None
 
-        for run_dir, ligand_state in cfg["runs"]:
+        # Die Variablen aus dem dict direkt entpacken
+        for run_dir, ligand_state, path_normal, path_chainA, path_comp, path_comp_mean in cfg["runs"]:
             print(f"------{cfg['label']} ({ligand_state})------")
 
             full_path = cfg["base_dir"] / run_dir
@@ -500,14 +520,12 @@ if structure_prediction_analysis_bool:
                     pure_tested_ids +
                     pure_comparison_ids)
 
-            suffix = cfg["suffix_clean"](run_dir)
-
             # normal plddt landscape with and without ligand
             plot_plddt_landscape(
                 plddt_stats,
                 model_to_cluster,
                 display_index=display_index,
-                save_path=(save_dir_dry_lab_plots / f"plddt_landscape_{suffix}.png"),
+                save_path=path_normal,
                 max_residue_len=global_max_len,
                 model_name=f"{cfg['label']} ({ligand_state})")
 
@@ -535,7 +553,7 @@ if structure_prediction_analysis_bool:
                     chain_stats,
                     model_to_cluster_chain,
                     display_index=display_index,
-                    save_path=(save_dir_dry_lab_plots / f"plddt_landscape_{suffix}_chainA.png"),
+                    save_path=path_chainA,
                     max_residue_len=None,
                     model_name=f"{cfg['label']} ({ligand_state}, chain A)")
 
@@ -546,32 +564,32 @@ if structure_prediction_analysis_bool:
                         stats_chainA=subset_chain,
                         tested_ids=pure_tested_ids,
                         comparison_ids=pure_comparison_ids,
-                        save_path=(save_dir_dry_lab_plots / f"{model_name}_tested_vs_comparison.png"),
-                        model_name=cfg["label"],)
+                        save_path=path_comp,
+                        model_name=cfg["label"], )
 
                     plot_mean_plddt_groups(
                         stats_without=subset_without,
                         stats_chainA=subset_chain,
                         tested_ids=pure_tested_ids,
                         comparison_ids=pure_comparison_ids,
-                        save_path=(save_dir_dry_lab_plots / f"{model_name}_tested_vs_comparison_mean.png"),
-                        model_name=cfg["label"],)
+                        save_path=path_comp_mean,
+                        model_name=cfg["label"], )
 
     CONDITIONS = [
         ("without ligand", {
             "ESMFold": ("esm", "esmFold_simple_all"),
             "Boltz-2": ("boltz", "boltz_simple_all"),
             "AF3": ("af3", "af3_simple_near"),
-        }),
+        }, path_mean_comp_without_ligand, None),
         ("with ligand", {
             "ESMFold": ("esm", "esmFold_with_ligand_all"),
             "Boltz-2": ("boltz", "boltz_with_ligand_all"),
             "AF3": ("af3", "af3_with_ligand_near"),
-        }),
+        }, path_mean_comp_with_ligand, path_mean_comp_with_ligand_chainA),
     ]
 
     # plddt mean plots
-    for ligand_state, mapping in CONDITIONS:
+    for ligand_state, mapping, path_normal, path_chainA in CONDITIONS:
         print(f"\n------Mean comparison ({ligand_state})------")
 
         stats_dict = {}
@@ -594,20 +612,20 @@ if structure_prediction_analysis_bool:
         plot_mean_plddt_multi_models(
             stats_dict,
             labels=list(stats_dict.keys()),
-            save_path=(save_dir_dry_lab_plots / f"plddt_mean_comparison_{ligand_state.replace(' ', '_')}.png"),
+            save_path=path_normal,
             display_index=display_index,
             max_structure_index=max(display_index.values()),
-            title=ligand_state,)
+            title=ligand_state, )
 
         # chain-only plddt mean plot
-        if stats_chain_dict:
+        if stats_chain_dict and path_chainA:
             plot_mean_plddt_multi_models(
                 stats_chain_dict,
                 labels=list(stats_chain_dict.keys()),
-                save_path=(save_dir_dry_lab_plots / f"plddt_mean_comparison_{ligand_state.replace(' ', '_')}_chainA.png"),
+                save_path=path_chainA,
                 display_index=display_index,
                 max_structure_index=max(display_index.values()),
-                title=f"{ligand_state} (chain A)",)
+                title=f"{ligand_state} (chain A)", )
 
 
 if MD_prep_bool:
