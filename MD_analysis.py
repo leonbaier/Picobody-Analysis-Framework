@@ -9,29 +9,10 @@ from MDAnalysis.analysis import rms, align, distances
 import numpy as np
 
 
-def run_md_analysis(topology_file: Path, trajectory_file: Path, output_dir: Path, analyses: list, run_name: str,
-):
-    u = load_aligned_universe(
-        topology_file=topology_file,
-        trajectory_file=trajectory_file,)
-    output_dir.mkdir(parents=True, exist_ok=True,)
-
-    for analysis in analyses:
-        analysis(u=u, output_dir=output_dir, run_name=run_name,)
-
-
 def get_archived_md_runs(md_archive_root: Path,
 ) -> list[Path]:
     """
-    Returns all archived MD run directories.
-
-    Example:
-        archive_root/
-            2026-06-23_08-00-00/
-                seq_1/
-                seq_2/
-            2026-06-24_09-00-00/
-                seq_3/
+    Collects archived runs.
     """
 
     run_dirs = []
@@ -48,6 +29,26 @@ def get_archived_md_runs(md_archive_root: Path,
 
 def get_md_analysis_runs(archive_root: Path, md_analyses: dict, force_reanalysis: bool = False,
 ) -> list[tuple[Path, Path, Path, list, str]]:
+    """
+        Identifies and validates archived MD runs that require analysis.
+
+        Scans the archive directory, checks for the existence of necessary input
+        files (topology, trajectory), and determines if the analysis has already
+        been completed. Supports forcing a re-analysis which overwrites old data.
+
+        Args:
+            archive_root (Path): The root directory containing archived MD runs.
+            md_analyses (dict): Configuration dictionary defining required outputs and analyses.
+            force_reanalysis (bool): If True, existing analysis directories are deleted and recomputed. Default is False.
+
+        Returns:
+            list[tuple[Path, Path, Path, list, str]]: A list of tuples, each containing:
+                - analysis_dir (Path): Target directory for outputs.
+                - topology_file (Path): Path to the valid topology file.
+                - trajectory_file (Path): Path to the valid trajectory file.
+                - analyses_current (list): List of specific analysis functions to run.
+                - run_name (str): Name of the specific MD run directory.
+        """
 
     runs = []
     n_finished = 0
@@ -78,9 +79,7 @@ def get_md_analysis_runs(archive_root: Path, md_analyses: dict, force_reanalysis
                 print(f"[MD Analysis] Removed existing analysis: {run_dir.name}")
 
         if not force_reanalysis:
-            already_done = all(
-                (analysis_dir / output_file).exists()
-                for output_file in required_outputs_current)
+            already_done = all((analysis_dir / output_file).exists() for output_file in required_outputs_current)
 
             if already_done:
                 n_skipped += 1
@@ -93,9 +92,7 @@ def get_md_analysis_runs(archive_root: Path, md_analyses: dict, force_reanalysis
             run_dir / "input.pdb",
             run_dir / "raw_input.pdb",]
 
-        topology_file = next(
-            (p for p in topology_candidates if p.exists()),
-            None,)
+        topology_file = next((p for p in topology_candidates if p.exists()), None,)
 
         if topology_file is None:
             n_missing_topology += 1
@@ -138,6 +135,20 @@ def get_md_analysis_runs(archive_root: Path, md_analyses: dict, force_reanalysis
 
 def load_aligned_universe(topology_file: Path, trajectory_file: Path,
 ) -> mda.Universe:
+    """
+        Loads an MD trajectory and aligns it to the initial topology.
+
+        Uses MDAnalysis to load the topology and coordinate trajectory, and
+        performs an in-memory structural alignment based on the C-alpha atoms
+        to remove translational and rotational motions.
+
+        Args:
+            topology_file (Path): Path to the reference PDB topology file.
+            trajectory_file (Path): Path to the DCD trajectory file.
+
+        Returns:
+            mda.Universe: The aligned MDAnalysis Universe object.
+        """
 
     u = mda.Universe(topology_file, trajectory_file)
     align.AlignTraj(u, u, select="protein and name CA", in_memory=True).run()
@@ -145,9 +156,43 @@ def load_aligned_universe(topology_file: Path, trajectory_file: Path,
     return u
 
 
+def run_md_analysis(topology_file: Path, trajectory_file: Path, output_dir: Path, analyses: list, run_name: str,
+):
+    """
+        Executes a series of analysis functions on a given MD simulation run.
+
+        Loads the trajectory, aligns it to the initial topology in memory, and
+        sequentially runs the provided analysis functions (e.g., RMSD, RMSF).
+
+        Args:
+            topology_file (Path): Path to the reference PDB topology file.
+            trajectory_file (Path): Path to the DCD trajectory file.
+            output_dir (Path): Directory where the analysis outputs will be saved.
+            analyses (list): List of callable analysis functions to execute.
+            run_name (str): Identifier of the simulation run.
+        """
+    u = load_aligned_universe(
+        topology_file=topology_file,
+        trajectory_file=trajectory_file,)
+    output_dir.mkdir(parents=True, exist_ok=True,)
+
+    for analysis in analyses:
+        analysis(u=u, output_dir=output_dir, run_name=run_name,)
+
+
 def create_rmsd_analysis(u: mda.Universe, output_dir: Path, run_name: str
 ):
+    """
+        Calculates the Root Mean Square Deviation (RMSD) of the trajectory.
 
+        Computes the RMSD of the C-alpha atoms over the simulation time.
+        The results are saved as a CSV file and plotted as a PNG image.
+
+        Args:
+            u (mda.Universe): The aligned MDAnalysis Universe.
+            output_dir (Path): Directory where the CSV and PNG files will be saved.
+            run_name (str): Identifier of the current run for plot titles.
+        """
     R = rms.RMSD(u, u, select="protein and name CA",)
     R.run()
 
@@ -173,6 +218,18 @@ def create_rmsd_analysis(u: mda.Universe, output_dir: Path, run_name: str
 
 def create_rmsf_analysis(u: mda.Universe, output_dir: Path, run_name: str
 ):
+    """
+        Calculates the Root Mean Square Fluctuation (RMSF) of the protein.
+
+        Computes the per-residue RMSF for the C-alpha atoms across the trajectory
+        to quantify local flexibility. The results are saved as a CSV file and
+        plotted as a PNG image. Gaps in residue numbering are handled in the plot.
+
+        Args:
+            u (mda.Universe): The aligned MDAnalysis Universe.
+            output_dir (Path): Directory where the CSV and PNG files will be saved.
+            run_name (str): Identifier of the current run for plot titles.
+        """
 
     protein = u.select_atoms("protein and name CA")
 
@@ -213,7 +270,17 @@ def create_binder_target_distance_analysis(u: mda.Universe, output_dir: Path, ru
 ):
 
     """
-    Measures only differences between point of masses.
+    Calculates the distance between the centers of mass of the binder and target.
+
+    Iterates through the trajectory to compute the Euclidean distance between
+    the center of mass of the binder chain and the target chain at each frame.
+
+    Args:
+        u (mda.Universe): The aligned MDAnalysis Universe.
+        output_dir (Path): Directory for saving the CSV and PNG files.
+        run_name (str): Identifier of the current run for plot titles.
+        binder_chain (str): Segment ID of the binder (default: "B").
+        target_chain (str): Segment ID of the target (default: "A").
     """
 
     binder = u.select_atoms(f"segid {binder_chain}")
@@ -254,6 +321,19 @@ def create_binder_target_distance_analysis(u: mda.Universe, output_dir: Path, ru
 def create_minimum_contact_distance_analysis(u: mda.Universe, output_dir: Path, run_name: str, binder_chain: str = "B",
         target_chain: str = "A",
 ):
+    """
+        Calculates the minimum atomic distance between the binder and the target.
+
+        Computes a distance matrix between all atoms of the binder and the target
+        for every frame and extracts the absolute minimum distance (closest contact).
+
+        Args:
+            u (mda.Universe): The aligned MDAnalysis Universe.
+            output_dir (Path): Directory for saving the CSV and PNG files.
+            run_name (str): Identifier of the current run for plot titles.
+            binder_chain (str): Segment ID of the binder (default: "B").
+            target_chain (str): Segment ID of the target (default: "A").
+        """
 
     binder = u.select_atoms(f"segid {binder_chain}")
     target = u.select_atoms(f"segid {target_chain}")
@@ -294,6 +374,19 @@ def create_minimum_contact_distance_analysis(u: mda.Universe, output_dir: Path, 
 
 def create_conditions_file(run_dir: Path, output_dir: Path, run_name: str,
 ):
+    """
+        Generates a comprehensive metadata summary for an MD simulation run.
+
+        Parses the OpenMM Python script, SLURM batch file, MD log file, and
+        trajectory data using regular expressions to extract hardware settings,
+        thermodynamic parameters, runtimes, and structural information.
+        Writes a formatted report ('conditions.txt') to the analysis directory.
+
+        Args:
+            run_dir (Path): The original MD run directory containing scripts and logs.
+            output_dir (Path): The analysis directory where 'conditions.txt' is saved.
+            run_name (str): Identifier of the current run.
+        """
 
     slurm_file = run_dir / "run_md.slurm"
     python_file = run_dir / "run_md.py"

@@ -109,10 +109,10 @@ DEBUG = False
 
 general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
-structure_prediction_prep_bool = True
-structure_prediction_analysis_bool = True # does not work if old pdb files are present
-MD_prep_bool = False
-MD_analysis_bool = False
+structure_prediction_prep_bool = False
+structure_prediction_analysis_bool = False # does not work if old pdb files are present
+MD_prep_bool = True
+MD_analysis_bool = True
 wet_lab_analysis_bool = False
 figure_creation_bool = False
 
@@ -710,16 +710,8 @@ if MD_analysis_bool:
                 "minimum_contact_distance.png",
             ],
             "analyses": [
-                partial(
-                    create_binder_target_distance_analysis,
-                    binder_chain="B",
-                    target_chain="A",
-                ),
-                partial(
-                    create_minimum_contact_distance_analysis,
-                    binder_chain="B",
-                    target_chain="A",
-                ),
+                partial(create_binder_target_distance_analysis, binder_chain="B", target_chain="A",),
+                partial(create_minimum_contact_distance_analysis, binder_chain="B", target_chain="A",),
             ]
         }
     }
