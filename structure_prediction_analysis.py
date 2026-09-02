@@ -604,7 +604,10 @@ def plot_plddt_landscape(plddt_stats: dict, model_to_cluster: dict, save_path=No
 
 
 def extract_seq_id(mid: str) -> str:
-
+    """
+        Extracts the base sequence or knob ID (e.g., 'seq_12' or 'knob_5')
+        from a complex model ID string using regular expressions.
+    """
     # seq IDs
     match = re.search(r"orig_id=(seq_\d+)", mid)
     if match:
@@ -633,7 +636,10 @@ def extract_seq_id(mid: str) -> str:
 
 def filter_plddt_stats_by_ids(plddt_stats: dict, wanted_ids: list[str],
 ) -> dict:
-
+    """
+        Filters a dictionary of pLDDT statistics to retain only the entries
+        corresponding to a specified list of target sequence IDs.
+    """
     wanted_ids = set(wanted_ids)
 
     return {
@@ -644,6 +650,10 @@ def filter_plddt_stats_by_ids(plddt_stats: dict, wanted_ids: list[str],
 
 
 def load_plddt_array(plddt_path):
+    """
+        Loads a pLDDT numpy array from disk and reduces it to a 1D residue-wise
+        array by averaging across the atom dimension if necessary.
+    """
     data = np.load(plddt_path)
 
     if isinstance(data, np.ndarray):
@@ -663,6 +673,11 @@ def load_plddt_array(plddt_path):
 
 def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, comparison_ids, save_path=None, model_name=None,
 ):
+    """
+        Plots a grouped pLDDT heatmap comparing experimentally tested variants
+        against comparison variants in both their monomeric (-L) and complexed
+        (+L, Chain A) states.
+    """
     ordered_rows = []
 
     # all without ligand first
@@ -913,7 +928,11 @@ def plot_mean_plddt_multi_models(plddt_stats_dict: dict, labels: list[str], save
 
 
 def collect_esm_chain_models(base_dir: Path):
-
+    """
+        Parses ESMFold PDB outputs to identify residues belonging specifically
+        to Chain A, extracts their corresponding pLDDT scores, and saves them
+        as a new numpy array.
+    """
     plddt_stats = {}
 
     for npy_file in base_dir.glob("*_plddt.npy"):
@@ -1104,7 +1123,11 @@ def extract_chain_residue_plddt_from_cif(cif_path, atom_plddt, target_chain="A")
 
 
 def collect_af_chain_models(base_pred_dir: Path, target_chain="A"):
-
+    """
+        Iterates over AlphaFold 3 predictions, extracts atom-wise pLDDT scores
+        from JSON files, maps them to the CIF structure, and calculates the
+        residue-wise pLDDT strictly for a specific target chain (default: A).
+    """
     plddt_stats = {}
 
     for pred_dir in base_pred_dir.iterdir():
@@ -1159,7 +1182,10 @@ def collect_af_chain_models(base_pred_dir: Path, target_chain="A"):
 
 
 def extract_chain_from_pdb(pdb_path, target_chain="A"):
-
+    """
+        Parses a PDB file using Biopython and returns the total number of
+        standard residues present in the specified target chain.
+    """
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("model", str(pdb_path))
 
@@ -1180,6 +1206,11 @@ def extract_chain_from_pdb(pdb_path, target_chain="A"):
 
 def plot_mean_plddt_groups(stats_without, stats_chainA, tested_ids, comparison_ids, save_path=None, model_name=None,
 ):
+    """
+        Plots a grouped horizontal bar chart comparing the mean pLDDT scores
+        of tested and comparison variants in their monomeric (-L) and
+        complexed (+L) states.
+    """
     labels = []
     means = []
     colors = []
