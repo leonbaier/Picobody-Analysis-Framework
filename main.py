@@ -81,7 +81,9 @@ from MD_analysis import (
     create_rmsd_analysis,
     create_rmsf_analysis,
     create_binder_target_distance_analysis,
-    create_minimum_contact_distance_analysis)
+    create_minimum_contact_distance_analysis,
+    plot_combined_rmsd,
+    plot_combined_rmsf)
 from wet_lab_analysis import (
     create_fab_reports,
     load_akta_csv,
@@ -111,7 +113,7 @@ general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
-MD_prep_bool = True
+MD_prep_bool = False
 MD_analysis_bool = True
 wet_lab_analysis_bool = False
 figure_creation_bool = False
@@ -688,8 +690,19 @@ if MD_prep_bool:
 
 
 if MD_analysis_bool:
-
     print("\n--------------------MD Analysis--------------------")
+    neg_ids_for_comparison = get_negative_binder_ids_from_vx_name(
+        save_dir_variable_data / "clustering_summary.xlsx",
+        comparison_variant_v)
+    tested_id_v1 = get_negative_binder_ids_from_vx_name(
+        save_dir_variable_data / "clustering_summary.xlsx",
+        experimental_tested_variant_v)
+
+    pure_comparison_ids, pure_tested_ids = build_comparison_and_tested_id_sets(
+        comparison_ids=list(neg_ids_for_comparison.values()),
+        tested_ids=list(tested_id_v1.values()),
+        additional_comparison_ids=comparison_variant_seq,
+        additional_tested_ids=experimental_tested_variant_seq)
 
     md_analyses = {
         "default": {
@@ -731,11 +744,17 @@ if MD_analysis_bool:
         md_analyses=md_analyses,
         force_reanalysis=True,)
 
+    target_archive_folders = [
+        "2026-07-30_09-31-27_experimental-run",
+        "2026-08-03_09-49-51_comparison-run"]
+
+    all_generated_paths = {}
+
     for (analysis_dir, topology_file, trajectory_file, analyses, run_name) in analysis_runs:
         create_conditions_file(
             run_dir=topology_file.parent,
             output_dir=analysis_dir,
-            run_name=run_name,)
+            run_name=run_name, )
 
         run_md_analysis(
             topology_file=topology_file,
@@ -744,7 +763,60 @@ if MD_analysis_bool:
             analyses=analyses,
             run_name=run_name)
 
+        timestamp_folder = analysis_dir.parent.parent.name
+
+        if timestamp_folder in target_archive_folders:
+            all_generated_paths[run_name] = {
+                "rmsd_csv": analysis_dir / "rmsd.csv",
+                "rmsf_csv": analysis_dir / "rmsf.csv"
+            }
+
         print(f"[MD Analysis] Finished {run_name}")
+
+    apo_runs = [run for run in all_generated_paths.keys() if "without_ligand" in run]
+    holo_runs = [run for run in all_generated_paths.keys() if "with_ligand" in run]
+
+    # 1. Apo
+    if apo_runs:
+        print(f"[Overview] Generating APO plots for {len(apo_runs)} runs...")
+        plot_combined_rmsd(
+            run_paths_dict=all_generated_paths,
+            target_runs=apo_runs,
+            tested_ids=pure_tested_ids,
+            comparison_ids=pure_comparison_ids,
+            save_path=save_dir_dry_lab_plots / "MD_overview_RMSD_apo.png",
+            title="Combined RMSD (Apo State)",
+            rolling_window=50)
+
+        plot_combined_rmsf(
+            run_paths_dict=all_generated_paths,
+            target_runs=apo_runs,
+            tested_ids=pure_tested_ids,
+            comparison_ids=pure_comparison_ids,
+            save_path=save_dir_dry_lab_plots / "MD_overview_RMSF_apo.png",
+            title="Combined RMSF (Apo State)",
+        )
+
+    # 2. Holo
+    if holo_runs:
+        print(f"[Overview] Generating HOLO plots for {len(holo_runs)} runs...")
+        plot_combined_rmsd(
+            run_paths_dict=all_generated_paths,
+            target_runs=holo_runs,
+            tested_ids=pure_tested_ids,
+            comparison_ids=pure_comparison_ids,
+            save_path=save_dir_dry_lab_plots / "MD_overview_RMSD_holo.png",
+            title="Combined RMSD (Holo State)",
+            rolling_window=50)
+
+        plot_combined_rmsf(
+            run_paths_dict=all_generated_paths,
+            target_runs=holo_runs,
+            tested_ids=pure_tested_ids,
+            comparison_ids=pure_comparison_ids,
+            save_path=save_dir_dry_lab_plots / "MD_overview_RMSF_holo.png",
+            title="Combined RMSF (Holo State)",
+        )
 
 
 
