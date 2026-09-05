@@ -83,7 +83,9 @@ from MD_analysis import (
     create_binder_target_distance_analysis,
     create_minimum_contact_distance_analysis,
     plot_combined_rmsd,
-    plot_combined_rmsf)
+    plot_combined_rmsf,
+    plot_combined_binder_target_distance,
+    plot_combined_minimum_contact_distance)
 from wet_lab_analysis import (
     create_fab_reports,
     load_akta_csv,
@@ -226,7 +228,14 @@ path_mean_comp_without_ligand = save_dir_dry_lab_plots / "plddt_mean_comparison_
 path_mean_comp_with_ligand = save_dir_dry_lab_plots / "plddt_mean_comparison_with_ligand.png"
 path_mean_comp_with_ligand_chainA = save_dir_dry_lab_plots / "plddt_mean_comparison_with_ligand_chainA.png"
 
+# MD analysis overview
+path_md_overview_rmsd_apo = save_dir_dry_lab_plots / "MD_overview_RMSD_apo.png"
+path_md_overview_rmsf_apo = save_dir_dry_lab_plots / "MD_overview_RMSF_apo.png"
 
+path_md_overview_rmsd_holo = save_dir_dry_lab_plots / "MD_overview_RMSD_holo.png"
+path_md_overview_rmsf_holo = save_dir_dry_lab_plots / "MD_overview_RMSF_holo.png"
+path_md_overview_binder_dist = save_dir_dry_lab_plots / "MD_overview_binder_target_distance.png"
+path_md_overview_min_dist = save_dir_dry_lab_plots / "MD_overview_min_contact_distance.png"
 
 # ---------------Initializing--------------------------
 save_dir_variable_data.mkdir(exist_ok=True)
@@ -768,8 +777,9 @@ if MD_analysis_bool:
         if timestamp_folder in target_archive_folders:
             all_generated_paths[run_name] = {
                 "rmsd_csv": analysis_dir / "rmsd.csv",
-                "rmsf_csv": analysis_dir / "rmsf.csv"
-            }
+                "rmsf_csv": analysis_dir / "rmsf.csv",
+                "binder_dist_csv": analysis_dir / "binder_target_distance.csv",
+                "min_dist_csv": analysis_dir / "minimum_contact_distance.csv"}
 
         print(f"[MD Analysis] Finished {run_name}")
 
@@ -784,7 +794,7 @@ if MD_analysis_bool:
             target_runs=apo_runs,
             tested_ids=pure_tested_ids,
             comparison_ids=pure_comparison_ids,
-            save_path=save_dir_dry_lab_plots / "MD_overview_RMSD_apo.png",
+            save_path=path_md_overview_rmsd_apo,
             title="Combined RMSD (Apo State)",
             rolling_window=50)
 
@@ -793,30 +803,47 @@ if MD_analysis_bool:
             target_runs=apo_runs,
             tested_ids=pure_tested_ids,
             comparison_ids=pure_comparison_ids,
-            save_path=save_dir_dry_lab_plots / "MD_overview_RMSF_apo.png",
-            title="Combined RMSF (Apo State)",
-        )
+            save_path=path_md_overview_rmsf_apo,
+            title="Combined RMSF (Apo State)")
 
-    # 2. Holo
-    if holo_runs:
-        print(f"[Overview] Generating HOLO plots for {len(holo_runs)} runs...")
-        plot_combined_rmsd(
-            run_paths_dict=all_generated_paths,
-            target_runs=holo_runs,
-            tested_ids=pure_tested_ids,
-            comparison_ids=pure_comparison_ids,
-            save_path=save_dir_dry_lab_plots / "MD_overview_RMSD_holo.png",
-            title="Combined RMSD (Holo State)",
-            rolling_window=50)
+        # 2. Holo
+        if holo_runs:
+            print(f"[Overview] Generating HOLO plots for {len(holo_runs)} runs...")
 
-        plot_combined_rmsf(
-            run_paths_dict=all_generated_paths,
-            target_runs=holo_runs,
-            tested_ids=pure_tested_ids,
-            comparison_ids=pure_comparison_ids,
-            save_path=save_dir_dry_lab_plots / "MD_overview_RMSF_holo.png",
-            title="Combined RMSF (Holo State)",
-        )
+            plot_combined_rmsd(
+                run_paths_dict=all_generated_paths,
+                target_runs=holo_runs,
+                tested_ids=pure_tested_ids,
+                comparison_ids=pure_comparison_ids,
+                save_path=path_md_overview_rmsd_holo,
+                title="Combined RMSD (Holo State)",
+                rolling_window=50)
+
+            plot_combined_rmsf(
+                run_paths_dict=all_generated_paths,
+                target_runs=holo_runs,
+                tested_ids=pure_tested_ids,
+                comparison_ids=pure_comparison_ids,
+                save_path=path_md_overview_rmsf_holo,
+                title="Combined RMSF (Holo State)")
+
+            plot_combined_binder_target_distance(
+                run_paths_dict=all_generated_paths,
+                target_runs=holo_runs,
+                tested_ids=pure_tested_ids,
+                comparison_ids=pure_comparison_ids,
+                save_path=path_md_overview_binder_dist,
+                title="Combined Binder-Target Distance",
+                rolling_window=50)
+
+            plot_combined_minimum_contact_distance(
+                run_paths_dict=all_generated_paths,
+                target_runs=holo_runs,
+                tested_ids=pure_tested_ids,
+                comparison_ids=pure_comparison_ids,
+                save_path=path_md_overview_min_dist,
+                title="Combined Minimum Contact Distance",
+                rolling_window=50)
 
 
 

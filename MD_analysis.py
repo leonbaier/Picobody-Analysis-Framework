@@ -1,6 +1,7 @@
 from pathlib import Path
 import shutil
 import re
+from itertools import cycle
 
 import MDAnalysis as mda
 import matplotlib.pyplot as plt
@@ -385,7 +386,6 @@ def plot_combined_rmsd(run_paths_dict: dict, target_runs: list, tested_ids: list
     """
     plt.figure(figsize=(10, 6))
 
-    # Linienstile für die Unterscheidbarkeit innerhalb der gleichen Farbgruppe
     tested_styles = cycle(['-', '--', '-.', ':'])
     comp_styles = cycle(['-', '--', '-.', ':'])
 
@@ -397,7 +397,6 @@ def plot_combined_rmsd(run_paths_dict: dict, target_runs: list, tested_ids: list
             label = run_name.replace("_best_af", "").replace("_best_boltz", "").replace("_with_ligand", "").replace(
                 "_without_ligand", "").replace("_", " ")
 
-            # Farb- und Stilzuweisung
             if any(run_name.startswith(f"{tid}_") for tid in tested_ids):
                 color = "royalblue"
                 ls = next(tested_styles)
@@ -421,7 +420,10 @@ def plot_combined_rmsd(run_paths_dict: dict, target_runs: list, tested_ids: list
 
     plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
     plt.tight_layout()
-    plt.savefig(save_path, dpi=300)
+
+    save_path = Path(save_path).resolve()
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(save_path), dpi=300)
     plt.close()
 
 
@@ -443,7 +445,6 @@ def plot_combined_rmsf(run_paths_dict: dict, target_runs: list, tested_ids: list
             label = run_name.replace("_best_af", "").replace("_best_boltz", "").replace("_with_ligand", "").replace(
                 "_without_ligand", "").replace("_", " ")
 
-            # Farb- und Stilzuweisung
             if any(run_name.startswith(f"{tid}_") for tid in tested_ids):
                 color = "royalblue"
                 ls = next(tested_styles)
@@ -480,7 +481,116 @@ def plot_combined_rmsf(run_paths_dict: dict, target_runs: list, tested_ids: list
 
     plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
     plt.tight_layout()
-    plt.savefig(save_path, dpi=300)
+
+    save_path = Path(save_path).resolve()
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(save_path), dpi=300)
+    plt.close()
+
+
+def plot_combined_binder_target_distance(run_paths_dict: dict, target_runs: list, tested_ids: list,
+                                         comparison_ids: list,
+                                         save_path: Path, title: str = "Combined Binder-Target Distance",
+                                         rolling_window: int = 50):
+    """
+    Plots multiple Binder-Target Center of Mass distances in a single figure.
+    """
+    plt.figure(figsize=(10, 6))
+
+    tested_styles = cycle(['-', '--', '-.', ':'])
+    comp_styles = cycle(['-', '--', '-.', ':'])
+
+    for run_name in target_runs:
+        if run_name in run_paths_dict and "binder_dist_csv" in run_paths_dict[run_name]:
+            csv_path = run_paths_dict[run_name]["binder_dist_csv"]
+
+            if not csv_path.exists():
+                continue
+
+            df = pd.read_csv(csv_path)
+            label = run_name.replace("_best_af", "").replace("_best_boltz", "").replace("_with_ligand", "").replace(
+                "_without_ligand", "").replace("_", " ")
+
+            if any(run_name.startswith(f"{tid}_") for tid in tested_ids):
+                color = "royalblue"
+                ls = next(tested_styles)
+            elif any(run_name.startswith(f"{cid}_") for cid in comparison_ids):
+                color = "firebrick"
+                ls = next(comp_styles)
+            else:
+                color = "gray"
+                ls = "-"
+
+            if rolling_window > 1:
+                y_vals = df["Distance_Angstrom"].rolling(window=rolling_window, min_periods=1).mean()
+            else:
+                y_vals = df["Distance_Angstrom"]
+
+            plt.plot(df["Time_ps"], y_vals, label=label, color=color, linestyle=ls, linewidth=1.5, alpha=0.85)
+
+    plt.xlabel("Time (ps)")
+    plt.ylabel("Distance (Å)")
+    plt.title(title)
+
+    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+    plt.tight_layout()
+
+    save_path = Path(save_path).resolve()
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(save_path), dpi=300)
+    plt.close()
+
+
+def plot_combined_minimum_contact_distance(run_paths_dict: dict, target_runs: list, tested_ids: list,
+                                           comparison_ids: list,
+                                           save_path: Path, title: str = "Combined Minimum Contact Distance",
+                                           rolling_window: int = 50):
+    """
+    Plots multiple Minimum Contact Distances in a single figure.
+    """
+    plt.figure(figsize=(10, 6))
+
+    tested_styles = cycle(['-', '--', '-.', ':'])
+    comp_styles = cycle(['-', '--', '-.', ':'])
+
+    for run_name in target_runs:
+        if run_name in run_paths_dict and "min_dist_csv" in run_paths_dict[run_name]:
+            csv_path = run_paths_dict[run_name]["min_dist_csv"]
+
+            if not csv_path.exists():
+                continue
+
+            df = pd.read_csv(csv_path)
+            label = run_name.replace("_best_af", "").replace("_best_boltz", "").replace("_with_ligand", "").replace(
+                "_without_ligand", "").replace("_", " ")
+
+            if any(run_name.startswith(f"{tid}_") for tid in tested_ids):
+                color = "royalblue"
+                ls = next(tested_styles)
+            elif any(run_name.startswith(f"{cid}_") for cid in comparison_ids):
+                color = "firebrick"
+                ls = next(comp_styles)
+            else:
+                color = "gray"
+                ls = "-"
+
+            if rolling_window > 1:
+                y_vals = df["Min_Distance_Angstrom"].rolling(window=rolling_window, min_periods=1).mean()
+            else:
+                y_vals = df["Min_Distance_Angstrom"]
+
+            plt.plot(df["Time_ps"], y_vals, label=label, color=color, linestyle=ls, linewidth=1.5, alpha=0.85)
+
+    plt.xlabel("Time (ps)")
+    plt.ylabel("Minimum Contact Distance (Å)")
+    plt.title(title)
+
+    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+    plt.tight_layout()
+
+    save_path = Path(save_path).resolve()
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(save_path), dpi=300)
     plt.close()
 
 
