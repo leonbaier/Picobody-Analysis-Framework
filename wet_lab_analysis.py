@@ -370,6 +370,47 @@ Tyr positions:
     return results
 
 
+def export_picobody_table_to_latex(df: pd.DataFrame, latex_path: str | Path, caption: str, label: str):
+    """
+    Generates a LaTeX table directly from the DataFrame
+    using siunitx (\num{}), booktabs, and tabularx.
+    """
+    # Write the LaTeX file
+    with open(latex_path, "w", encoding="utf-8") as f:
+        f.write("\\begin{table}[htbp]\n")
+        f.write("\\centering\n")
+
+        # Note: Curly braces in f-strings must be doubled for LaTeX formatting!
+        f.write(f"\\caption{{{caption}}}\n")
+        f.write(f"\\label{{{label}}}\n")
+
+        # Requested column definition
+        f.write("\\begin{tabularx}{\\textwidth}{l L L}\n")
+        f.write("\\toprule\n")
+
+        # Table header with properly formatted math symbols
+        header = "Variant & Molecular Weight (Da) & $\\varepsilon_{280, \\text{ox}}$ (M$^{-1}$~cm$^{-1}$) \\\\\n"
+        f.write(header)
+        f.write("\\midrule\n")
+
+        # Iterate through data rows and wrap values in \num{}
+        for variant_name, row in df.iterrows():
+            # Escape underscores in variant names for LaTeX (e.g., V1_mut -> V1\_mut)
+            variant_clean = str(variant_name).replace("_", "\\_")
+
+            # Extract values and format them for siunitx
+            mw_val = f"\\num{{{row['Molecular Weight (Da)']:.2f}}}"
+
+            # Epsilon is always an integer, hence int()
+            eps_val = f"\\num{{{int(row['Epsilon_Oxidized'])}}}"
+
+            f.write(f"{variant_clean} & {mw_val} & {eps_val} \\\\\n")
+
+        f.write("\\bottomrule\n")
+        f.write("\\end{tabularx}\n")
+        f.write("\\end{table}\n")
+
+
 def load_akta_csv(csv_path: str | Path) -> dict:
 
     encodings = [

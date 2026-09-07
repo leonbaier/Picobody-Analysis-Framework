@@ -3,6 +3,7 @@ import time
 import re
 from functools import partial
 import warnings
+import pandas as pd
 
 from data_import import (
     load_fasta_sequences,
@@ -88,6 +89,7 @@ from MD_analysis import (
     plot_combined_minimum_contact_distance)
 from wet_lab_analysis import (
     create_fab_reports,
+    export_picobody_table_to_latex,
     load_akta_csv,
     plot_affinity_chromatography_run,
     report_sec_fractions,
@@ -116,8 +118,8 @@ cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
-MD_analysis_bool = True
-wet_lab_analysis_bool = False
+MD_analysis_bool = False
+wet_lab_analysis_bool = True
 figure_creation_bool = False
 
 show_plot_titles = False
@@ -854,6 +856,19 @@ if wet_lab_analysis_bool:
     fab_data = create_fab_reports(
         sequence_file=location_sequences_HC_V1V12V13V14_LC,
         output_dir=save_dir_variable_data,)
+
+    table_data = []
+    for variant, data in fab_data.items():
+        table_data.append({"Variant": variant, "Molecular Weight (Da)": data["Fab"]["MW_Da"],
+                           "Epsilon_Oxidized": data["Fab"]["Epsilon_Oxidized"]})
+    df_picobodies_epsilon = pd.DataFrame(table_data).set_index("Variant")
+
+    export_picobody_table_to_latex(
+        df=df_picobodies_epsilon,
+        latex_path=Path(save_dir_tables_gen) / "picobody_properties.tex",
+        caption="Theoretical molecular weights ($M_W$) and oxidized molar extinction coefficients ($\\varepsilon_{280, \\text{ox}}$) of the four picobody variants.",
+        label="tab:picobody_properties")
+
 
     # plot affinity chromatography results
     affinity_data_all = {}
