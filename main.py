@@ -619,7 +619,11 @@ if structure_prediction_analysis_bool:
                         tested_ids=pure_tested_ids,
                         comparison_ids=pure_comparison_ids,
                         save_path=path_comp,
-                        model_name=cfg["label"], )
+                        model_name=cfg["label"],
+                        show_title=False,
+                        show_subtitles=False,
+                        show_xlabels=True,
+                        show_legend=is_top_row)
 
                     plot_mean_plddt_groups(
                         stats_without=subset_without,
@@ -662,16 +666,22 @@ if structure_prediction_analysis_bool:
                 stats_chain = cfg["collector_chain"](full_path)
                 stats_chain_dict[label] = stats_chain
 
-        # normal plddt mean plot
+        # --- legend logic (only A) ---
+        show_leg = (ligand_state == "without ligand")
+
+        # normal plddt mean plot (Panel A oder B)
         plot_mean_plddt_multi_models(
             stats_dict,
             labels=list(stats_dict.keys()),
             save_path=path_normal,
             display_index=display_index,
             max_structure_index=max(display_index.values()),
-            title=ligand_state, )
+            title=ligand_state,
+            show_title=False,
+            show_xlabels=True,
+            show_legend=show_leg)
 
-        # chain-only plddt mean plot
+        # chain-only plddt mean plot (Panel C)
         if stats_chain_dict and path_chainA:
             plot_mean_plddt_multi_models(
                 stats_chain_dict,
@@ -679,7 +689,10 @@ if structure_prediction_analysis_bool:
                 save_path=path_chainA,
                 display_index=display_index,
                 max_structure_index=max(display_index.values()),
-                title=f"{ligand_state} (chain A)", )
+                title=f"{ligand_state} (chain A)",
+                show_title=False,
+                show_xlabels=True,
+                show_legend=False)
 
 
 if MD_prep_bool:

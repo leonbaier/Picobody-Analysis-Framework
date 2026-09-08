@@ -528,7 +528,7 @@ def plot_plddt_landscape(plddt_stats: dict, model_to_cluster: dict, save_path=No
         fig.suptitle(" ", fontsize=24, y=0.98)
 
     if save_path is not None:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=300, bbox_inches='tight', pad_inches=0.3)
         print(f"plddt-Plot written to: {save_path}")
     else:
         plt.show()
@@ -604,31 +604,25 @@ def load_plddt_array(plddt_path):
     return np.squeeze(plddt)
 
 
-def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, comparison_ids, save_path=None, model_name=None,
-):
+def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, comparison_ids, save_path=None,
+                                model_name=None,
+                                show_title: bool = True, show_subtitles: bool = True, show_xlabels: bool = True,
+                                show_legend: bool = True):  # <--- NEU
     """
-        Plots a grouped pLDDT heatmap comparing experimentally tested variants
-        against comparison variants in both their monomeric (-L) and complexed
-        (+L, Chain A) states.
+    Plots a grouped pLDDT heatmap comparing experimentally tested variants
+    against comparison variants in both their monomeric (-L) and complexed
+    (+L, Chain A) states.
     """
     ordered_rows = []
 
     # all without ligand first
     for seq_id in tested_ids:
         ordered_rows.append((f"{seq_id} -L",
-            next(
-                v for k, v in stats_without.items()
-                if extract_seq_id(k) == seq_id
-            ), "tested"
-        ))
+                             next(v for k, v in stats_without.items() if extract_seq_id(k) == seq_id), "tested"))
 
     for seq_id in comparison_ids:
         ordered_rows.append((f"{seq_id} -L",
-            next(
-                v for k, v in stats_without.items()
-                if extract_seq_id(k) == seq_id
-            ), "comparison"
-        ))
+                             next(v for k, v in stats_without.items() if extract_seq_id(k) == seq_id), "comparison"))
 
     # spacer row
     ordered_rows.append((" ", None, "spacer"))
@@ -636,19 +630,11 @@ def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, compari
     # all chain A afterwards
     for seq_id in tested_ids:
         ordered_rows.append((f"{seq_id} +L",
-            next(
-                v for k, v in stats_chainA.items()
-                if extract_seq_id(k) == seq_id
-            ), "tested"
-        ))
+                             next(v for k, v in stats_chainA.items() if extract_seq_id(k) == seq_id), "tested"))
 
     for seq_id in comparison_ids:
         ordered_rows.append((f"{seq_id} +L",
-            next(
-                v for k, v in stats_chainA.items()
-                if extract_seq_id(k) == seq_id
-            ), "comparison"
-        ))
+                             next(v for k, v in stats_chainA.items() if extract_seq_id(k) == seq_id), "comparison"))
 
     group_ids = []
     labels = []
@@ -659,10 +645,8 @@ def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, compari
         labels.append(label)
         if group == "tested":
             group_ids.append(0)
-
         elif group == "comparison":
             group_ids.append(1)
-
         else:
             group_ids.append(np.nan)
 
@@ -682,111 +666,75 @@ def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, compari
 
     group_img = np.array(group_ids)[:, None]
     group_img = np.ma.masked_invalid(group_img)
-    group_cmap = ListedColormap([
-        "royalblue",  # tested
-        "firebrick",  # comparison
-    ])
+    group_cmap = ListedColormap(["royalblue", "firebrick"])
     group_cmap.set_bad("white")
 
+    # --- STYLE APPLY ---
+    set_publication_style(size="standard", figsize=(12, 8))
+
     fig = plt.figure(figsize=(12, 8))
-    gs = gridspec.GridSpec(
-        nrows=1,
-        ncols=3,
-        width_ratios=[0.3, 4, 0.7],  # mean panel narrower
-        wspace=0.03  # slightly tighter spacing
-    )
+    gs = gridspec.GridSpec(nrows=1, ncols=3, width_ratios=[0.3, 4, 0.7], wspace=0.03)
 
     ax_group = fig.add_subplot(gs[0])
     ax_heatmap = fig.add_subplot(gs[1], sharey=ax_group)
     ax_mean = fig.add_subplot(gs[2], sharey=ax_group)
 
     pos = ax_mean.get_position()
-    ax_mean.set_position((pos.x0 + 0.05, pos.y0, pos.width, pos.height,))
+    ax_mean.set_position((pos.x0 + 0.05, pos.y0, pos.width, pos.height))
 
     # group plot
-    ax_group.imshow(
-        group_img,
-        aspect="auto",
-        cmap=group_cmap,
-        interpolation="nearest",)
+    ax_group.imshow(group_img, aspect="auto", cmap=group_cmap, interpolation="nearest")
 
-    tick_positions = [
-        i for i, label in enumerate(labels)
-        if label.strip()]
-    tick_labels = [
-        label for label in labels
-        if label.strip()]
+    tick_positions = [i for i, label in enumerate(labels) if label.strip()]
+    tick_labels = [label for label in labels if label.strip()]
+
     ax_group.set_yticks(tick_positions)
-    ax_group.set_yticklabels(tick_labels, fontsize=8,)
-    ax_group.tick_params(axis="y", which="major", length=6, width=1.2,)
+    ax_group.set_yticklabels(tick_labels)
+    ax_group.tick_params(axis="y", which="major", length=6, width=1.2)
     ax_group.yaxis.tick_left()
-
     ax_group.set_xticks([])
 
-    legend_handles = [
-        Patch(color="royalblue", label="Tested"),
-        Patch(color="firebrick", label="Comparison"),]
-    ax_group.legend(
-        handles=legend_handles,
-        loc="lower left",
-        bbox_to_anchor=(0.0, 1.02),
-        fontsize=8,
-        frameon=False,)
+    # --- LOGIK FÜR DIE LEGENDE ---
+    if show_legend:
+        legend_handles = [Patch(color="royalblue", label="Tested"), Patch(color="firebrick", label="Comparison")]
+        ax_group.legend(handles=legend_handles, loc="lower left", bbox_to_anchor=(0.0, 1.02), frameon=False)
 
     # heatmap
-    im = ax_heatmap.imshow(
-        heatmap,
-        aspect="auto",
-        cmap="viridis",
-        vmin=0,
-        vmax=100,
-        interpolation="nearest",)
+    im = ax_heatmap.imshow(heatmap, aspect="auto", cmap="viridis", vmin=0, vmax=100, interpolation="nearest")
 
-    plt.setp(ax_heatmap.get_yticklabels(), visible=False,)
-    ax_heatmap.tick_params(
-        axis="y",
-        left=False,
-        labelleft=False,)
-    ax_heatmap.set_xlabel("Residue position")
-    ax_heatmap.set_title("Residue-wise pLDDT")
+    plt.setp(ax_heatmap.get_yticklabels(), visible=False)
+    ax_heatmap.tick_params(axis="y", left=False, labelleft=False)
+
+    if show_xlabels:
+        ax_heatmap.set_xlabel("Residue position")
+    if show_subtitles:
+        ax_heatmap.set_title("Residue-wise pLDDT")
 
     # mean plot
-    ax_mean.barh(
-        np.arange(len(mean_plddt)),
-        mean_plddt,
-        color="black",
-        alpha=0.6,)
-
+    ax_mean.barh(np.arange(len(mean_plddt)), mean_plddt, color="black", alpha=0.6)
     ax_mean.axvline(70, color="red", linestyle="--")
-
     ax_mean.set_xlim(0, 100)
-    ax_mean.set_xlabel("Mean pLDDT")
-    ax_mean.set_title("Mean")
+
+    if show_xlabels:
+        ax_mean.set_xlabel("Mean pLDDT")
+    if show_subtitles:
+        ax_mean.set_title("Mean")
 
     plt.setp(ax_mean.get_yticklabels(), visible=False)
-    ax_mean.tick_params(
-        axis="y",
-        which="both",
-        left=False,
-        labelleft=False,
-    )
+    ax_mean.tick_params(axis="y", which="both", left=False, labelleft=False)
 
     ax_group.set_ylim(ax_heatmap.get_ylim())
     ax_mean.set_ylim(ax_heatmap.get_ylim())
 
-    cbar = fig.colorbar(
-        im,
-        ax=ax_heatmap,
-        fraction=0.046,
-        pad=0.01,)
+    cbar = fig.colorbar(im, ax=ax_heatmap, fraction=0.046, pad=0.01)
 
-    cbar.set_label("pLDDT")
-    fig.suptitle(f"{model_name}: tested vs comparison", fontsize=14,)
-
-    plt.tight_layout()
+    if show_title:
+        fig.suptitle(f"{model_name}: tested vs comparison", y=0.98)
+    else:
+        fig.suptitle(" ", fontsize=24, y=0.98)
 
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches="tight",)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
     else:
         plt.show()
 
@@ -795,10 +743,13 @@ def plot_plddt_landscape_groups(stats_without, stats_chainA, tested_ids, compari
 
 def plot_mean_plddt_multi_models(plddt_stats_dict: dict, labels: list[str], save_path=None, display_index=None,
                                  max_structure_index=None, title=None,
-):
+                                 show_title: bool = True, show_xlabels: bool = True, show_legend: bool = True):
     """
     Compare mean pLDDT across models (1:1 mapping, no aggregation).
     """
+
+    # --- STYLE APPLY ---
+    set_publication_style(size="standard", figsize=(10, 4))
 
     plt.figure(figsize=(10, 4))
 
@@ -808,15 +759,11 @@ def plot_mean_plddt_multi_models(plddt_stats_dict: dict, labels: list[str], save
         y_vals = []
 
         if display_index is not None:
-            model_ids = sorted(
-                stats.keys(),
-                key=lambda mid: display_index[extract_seq_id(mid)]
-            )
+            model_ids = sorted(stats.keys(), key=lambda mid: display_index[extract_seq_id(mid)])
         else:
             model_ids = sorted(stats.keys())
 
         for mid in model_ids:
-
             data = stats[mid]
             seq_id = extract_seq_id(mid)
 
@@ -840,19 +787,27 @@ def plot_mean_plddt_multi_models(plddt_stats_dict: dict, labels: list[str], save
         plt.xlim(0, max_structure_index)
 
     plt.ylim(0, 100)
-    plt.xlabel("Structure index")
     plt.ylabel("Mean pLDDT")
 
-    if title:
-        plt.title(title)
+    if show_xlabels:
+        plt.xlabel("Structure index")
     else:
-        plt.title("Mean pLDDT comparison")
+        ax = plt.gca()
+        ax.set_xticklabels([])
 
-    plt.legend()
-    plt.tight_layout()
+    if show_title:
+        if title:
+            plt.title(title)
+        else:
+            plt.title("Mean pLDDT comparison")
+    else:
+        plt.title(" ", fontsize=24)  # Spacer für die Buchstaben
+
+    if show_legend:  # <--- NEU
+        plt.legend()
 
     if save_path:
-        plt.savefig(save_path, dpi=300)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"Comparison plot written to: {save_path}")
     else:
         plt.show()
