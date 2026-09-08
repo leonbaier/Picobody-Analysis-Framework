@@ -68,7 +68,7 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
     cell_width = (figure_width_px - col_spacing * (n_cols - 1)) // n_cols
 
     try:
-        font = ImageFont.truetype("arialbd.ttf", panel_label_size,)
+        font = ImageFont.truetype("arialbd.ttf", panel_label_size)
     except Exception:
         font = ImageFont.load_default()
 
@@ -78,16 +78,15 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
 
     panels = {}
     labels = sorted(set("".join(layout_rows)))
-    row_heights = [0] * n_rows
+    row_heights = [0.0] * n_rows  # Use float for accurate height distribution
 
     for label in labels:
         if label not in images:
             raise KeyError(f"No image provided for panel '{label}'.")
 
-        img = (Image.open(images[label]).convert("RGB"))
+        img = Image.open(images[label]).convert("RGB")
 
         positions = []
-
         for r, row in enumerate(layout_rows):
             for c, value in enumerate(row):
                 if value == label:
@@ -98,7 +97,6 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
 
         min_row = min(rows)
         max_row = max(rows)
-
         min_col = min(cols)
         max_col = max(cols)
 
@@ -110,31 +108,51 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
         scaled_width = int(img.width * scale)
         scaled_height = int(img.height * scale)
 
-        img = img.resize((scaled_width, scaled_height), Image.LANCZOS,)
+        img = img.resize((scaled_width, scaled_height), Image.LANCZOS)
 
         panels[label] = {
             "image": img,
-            "row": min_row,
+            "min_row": min_row,
+            "max_row": max_row,
             "col": min_col,
             "width": scaled_width,
-            "height": scaled_height,}
+            "height": scaled_height,
+        }
 
-        row_heights[min_row] = max(row_heights[min_row], scaled_height,)
+    # --------------------------------------------------
+    # TWO-PASS ROW HEIGHT CALCULATION (fixes vertical spanning)
+    # --------------------------------------------------
 
-    figure_height = (sum(row_heights) + row_spacing * (n_rows - 1))
+    # Pass 1: Set heights based strictly on panels that span exactly 1 row
+    for label, panel in panels.items():
+        if panel["min_row"] == panel["max_row"]:
+            r = panel["min_row"]
+            row_heights[r] = max(row_heights[r], panel["height"])
 
-    final_image = Image.new(
-        "RGB",
-        (figure_width_px, figure_height),
-        "white",)
+    # Pass 2: Distribute extra height required by multi-row panels (like AC / BC)
+    for label, panel in panels.items():
+        if panel["min_row"] < panel["max_row"]:
+            span_rows = panel["max_row"] - panel["min_row"] + 1
+            current_span_height = sum(row_heights[panel["min_row"]:panel["max_row"] + 1]) + row_spacing * (
+                        span_rows - 1)
 
+            if panel["height"] > current_span_height:
+                # Add the missing height equally to all rows it spans
+                deficit = panel["height"] - current_span_height
+                add_per_row = deficit / span_rows
+                for r in range(panel["min_row"], panel["max_row"] + 1):
+                    row_heights[r] += add_per_row
+
+    figure_height = int(sum(row_heights) + row_spacing * (n_rows - 1))
+
+    final_image = Image.new("RGB", (figure_width_px, figure_height), "white")
     draw = ImageDraw.Draw(final_image)
 
     row_offsets = []
     current_y = 0
 
     for h in row_heights:
-        row_offsets.append(current_y)
+        row_offsets.append(int(current_y))
         current_y += h + row_spacing
 
     # --------------------------------------------------
@@ -143,23 +161,21 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
 
     for label, panel in panels.items():
         panel_x = (panel["col"] * (cell_width + col_spacing))
-        panel_y = row_offsets[panel["row"]]
+        panel_y = row_offsets[panel["min_row"]]
 
-        final_image.paste(panel["image"], (panel_x, panel_y),)
+        final_image.paste(panel["image"], (panel_x, panel_y))
 
-        if cols[0]:
-            label_x = max(5, panel_x - panel_label_offset_x,)
+        # Fixed label offset logic based on actual panel column
+        if panel["col"] == 0:
+            label_x = max(5, panel_x - panel_label_offset_x)
         else:
-            label_x = (max(5, panel_x - panel_label_offset_x,) + right_column_label_offset)
-        label_y = max( 5, panel_y - panel_label_offset_y,)
+            label_x = max(5, panel_x - panel_label_offset_x) + right_column_label_offset
 
-        draw.text(
-            (label_x, label_y),
-            label,
-            fill="black",
-            font=font,)
+        label_y = max(5, panel_y - panel_label_offset_y)
 
-    output_file.parent.mkdir(parents=True, exist_ok=True,)
+        draw.text((label_x, label_y), label, fill="black", font=font)
+
+    output_file.parent.mkdir(parents=True, exist_ok=True)
     final_image.save(output_file)
 
     print(f"[Figure Creation] Saved: {output_file}")

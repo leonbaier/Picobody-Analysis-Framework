@@ -14,6 +14,8 @@ from scipy.optimize import curve_fit
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from io import StringIO
 
+from io_utils import set_publication_style
+
 
 def get_variant_color(name: str) -> str:
     okabe_ito = {
@@ -23,8 +25,8 @@ def get_variant_color(name: str) -> str:
         "magenta": "#CC79A7",
         "grey": "#7F7F7F",
         "black": "#000000",
-        "red": "#D55E00",  # Für No Knob
-        "skyblue": "#56B4E9",  # Für Nanobodies
+        "red": "#D55E00",      # For NoKnob
+        "skyblue": "#56B4E9",  # For Nanobodies
     }
 
     name = str(name)
@@ -502,57 +504,26 @@ def load_akta_csv(csv_path: str | Path) -> dict:
 
 
 def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], signals: list[str],
-                                    conc_b_easy_mode: bool = False, run_display_names: list[str] | None = None,  save_path=None,
-                                    title: str | None = None, fraction_filter: list[tuple[str, str]] | None = None,
-):
+                                     conc_b_easy_mode: bool = False, run_display_names: list[str] | None = None,
+                                     save_path=None, title: str | None = None,
+                                     fraction_filter: list[tuple[str, str]] | None = None,
+                                     show_title: bool = False):  # <--- DEFAULT FALSE
     """
-    Plot affinity chromatography data.csv (äkta output).
-
-    Parameters
-    ----------
-    data : dict
-        Dictionary returned by load_akta_csv().
-
-    run_name : str | list[str]
-        Single run name or a list of run names. If list then all variables of a single run ae plotted in the same color.
-        Single run mode is more complex with many plotting possibilities like different colors for different variables
-        and also the ability to plot categorical variables.
-
-    signals : list[str]
-        Signals to plot.
-
-        Examples:
-            ["UV"]
-            ["UV", "Conductivity", "Conc B"]
-
-        When multiple runs are supplied, only the requested
-        signals are overlaid for all runs.
-
-    run_display_names : list[str] | None
-        Optional display names for runs when plotting multiple runs.
-        Must have the same length as run_name if provided.
-
-    save_path : Path | str | None
-        Output path. If None, plot is displayed.
-
-    title : str | None
-        Optional custom plot title.
-
-    Notes
-    -----
-    If run_name is a list, all requested runs are plotted
-    in the same figure for direct comparison.
+    Plot affinity chromatography data (ÄKTA output).
     """
 
-    if isinstance(run_name, (list, tuple)):  # if list the only this block is performed otherwise skip
+    if isinstance(run_name, (list, tuple)):  # if list, only this block is performed, otherwise skip
 
+        # --- STYLE APPLY ---
+        set_publication_style(size="standard", figsize=(12, 6))
         fig, ax = plt.subplots(figsize=(12, 6))
+
         common_max_x = min(np.max(data[run][signals[0]]["x"]) for run in run_name)
 
         signal_styles = {
             "UV": "-",
             "Conductivity": "--",
-            "Conc B": ":",}
+            "Conc B": ":", }
 
         active_signals = [s for s in signals if not (conc_b_easy_mode and s == "Conc B")]
         multiple_signals = len(active_signals) > 1
@@ -568,10 +539,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                 raise KeyError(f"Run '{run}' not found.")
 
             run_data = data[run]
-            display_run = (
-                run_display_names[i]
-                if run_display_names is not None
-                else run)
+            display_run = (run_display_names[i] if run_display_names is not None else run)
 
             for signal in signals:
                 if signal not in run_data:
@@ -590,12 +558,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                         color = get_variant_color(display_run)
                         ls = "--" if "V14-1" in display_run else "-"
 
-                        ax.axvline(
-                            x=start_x,
-                            color=color,
-                            linestyle=ls,
-                            linewidth=1.5,
-                            alpha=0.3,)
+                        ax.axvline(x=start_x, color=color, linestyle=ls, linewidth=1.5, alpha=0.3)
                     continue
 
                 signal_data = run_data[signal]
@@ -604,10 +567,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                     continue
 
                 if multiple_runs:
-                    if multiple_signals:
-                        label = f"{display_run} - {signal}"
-                    else:
-                        label = display_run
+                    label = f"{display_run} - {signal}" if multiple_signals else display_run
                 else:
                     label = signal
 
@@ -622,9 +582,9 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                     signal_data["x"],
                     signal_data["y"],
                     label=label,
-                    color = get_variant_color(display_run),
+                    color=get_variant_color(display_run),
                     linestyle=linestyle,
-                    linewidth=2.5,)
+                    linewidth=2.5, )
 
         first_run = run_name[0]
         first_signal = active_signals[0]
@@ -632,17 +592,16 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         ax.set_xlabel("Volume [ml]")
         ax.set_xlim(0, common_max_x)
 
-        ax.set_ylabel(
-            f"{first_signal} "
-            f"[{data[first_run][first_signal]['y_label']}]")
+        ax.set_ylabel(f"{first_signal} [{data[first_run][first_signal]['y_label']}]")
         ax.set_ylim(bottom=0)
 
         ax.grid(alpha=0.3)
 
-        if title is None:
-            ax.set_title("Affinity Chromatography Comparison")
-        else:
-            ax.set_title(title)
+        if show_title:
+            if title is None:
+                ax.set_title("Affinity Chromatography Comparison")
+            else:
+                ax.set_title(title)
 
         handles, labels = ax.get_legend_handles_labels()
         sort_order = []
@@ -655,90 +614,60 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
             else:
                 sort_order.append(2)
 
-        sorted_items = sorted(zip(sort_order, handles, labels), key=lambda x: x[0],)
+        sorted_items = sorted(zip(sort_order, handles, labels), key=lambda x: x[0])
 
         handles = [item[1] for item in sorted_items]
         labels = [item[2] for item in sorted_items]
 
         if conc_b_easy_mode:
             class HandlerElutionLines(HandlerBase):
-                def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans,
-                ):
+                def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
                     colors, linestyles = orig_handle
                     artists = []
-                    n = len(colors)
-
-                    y_positions = [0, 0.5, 1, 1.5] # [0.15, 0.35, 0.65, 0.85]
+                    y_positions = [0, 0.5, 1, 1.5]
 
                     for y, color, ls in zip(y_positions, colors, linestyles):
-                        artists.append(
-                            Line2D(
-                                [width * 0.1, width * 0.9],
-                                [height * y, height * y],
-                                color=color,
-                                linestyle=ls,
-                                linewidth=2,
-                                alpha=0.5,
-                                transform=trans,))
-
+                        artists.append(Line2D([width * 0.1, width * 0.9], [height * y, height * y],
+                                              color=color, linestyle=ls, linewidth=2, alpha=0.5, transform=trans))
                     return artists
 
             elution_handle = (
-                [
-                    get_variant_color("V14"),
-                    get_variant_color("V13"),
-                    get_variant_color("V12"),
-                    get_variant_color("V1"),],
-                [
-                    "-",
-                    "-",
-                    "-",
-                    "-",])
+                [get_variant_color("V14"), get_variant_color("V13"), get_variant_color("V12"), get_variant_color("V1")],
+                ["-", "-", "-", "-"])
 
             handles.append(elution_handle)
             labels.append("Elution start")
-            ax.legend(
-                handles,
-                labels,
-                handler_map={tuple: HandlerElutionLines(),},)
+            ax.legend(handles, labels, handler_map={tuple: HandlerElutionLines()})
         else:
-            ax.legend(handles, labels,)
+            ax.legend(handles, labels)
+
         plt.tight_layout()
 
         if save_path is not None:
-            plt.savefig(save_path, dpi=300)
+            plt.savefig(save_path, dpi=300, bbox_inches="tight", pad_inches=0.3)
             print(f"Plot written to: {save_path}")
         else:
             plt.show()
 
         plt.close()
-
         return
 
+    # --- Single run mode ---
     if run_name not in data:
         raise KeyError(f"Run '{run_name}' not found.")
 
     run_data = data[run_name]
-    invalid_signals = [
-        signal for signal in signals
-        if signal not in run_data]
+    invalid_signals = [signal for signal in signals if signal not in run_data]
 
     if invalid_signals:
         available = sorted(run_data.keys())
+        raise ValueError(f"Signal(s) not found: {invalid_signals}\nAvailable signals for '{run_name}':\n{available}")
 
-        raise ValueError(
-            f"Signal(s) not found: {invalid_signals}\n"
-            f"Available signals for '{run_name}':\n"
-            f"{available}")
+    numeric_signals = [s for s in signals if run_data[s].get("type", "numeric") == "numeric"]
+    categorical_signals = [s for s in signals if run_data[s].get("type") == "categorical"]
 
-    numeric_signals = [
-        s for s in signals
-        if run_data[s].get("type", "numeric") == "numeric"]
-
-    categorical_signals = [
-        s for s in signals
-        if run_data[s].get("type") == "categorical"]
-
+    # --- STYLE APPLY ---
+    set_publication_style(size="standard", figsize=(12, 6))
     fig, ax1 = plt.subplots(figsize=(12, 6))
     axes = [ax1]
 
@@ -758,35 +687,26 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
     # ---------- numeric signals ----------
     for i, signal in enumerate(numeric_signals):
         signal_data = run_data[signal]
-
         ax = axes[min(i, len(axes) - 1)]
         signal_lower = signal.lower()
 
-        is_uvvis = any(
-            token in signal_lower
-            for token in ["uv", "uv_vis", "uvvis"])
-
+        is_uvvis = any(token in signal_lower for token in ["uv", "uv_vis", "uvvis"])
         color = get_variant_color(run_name)
 
         line = ax.plot(
-            signal_data["x"],
-            signal_data["y"],
-            color=color,
-            linewidth=2.0 if is_uvvis else 1.5,
-            alpha=1.0 if is_uvvis else 0.9,
-            zorder=10 if is_uvvis else 1,
-            label=signal,
+            signal_data["x"], signal_data["y"],
+            color=color, linewidth=2.0 if is_uvvis else 1.5,
+            alpha=1.0 if is_uvvis else 0.9, zorder=10 if is_uvvis else 1, label=signal,
         )[0]
 
-        ax.set_ylabel(f"{signal} ({signal_data['y_label']})", color=color,)
-        ax.tick_params(axis="y", labelcolor=color,)
+        ax.set_ylabel(f"{signal} ({signal_data['y_label']})", color=color)
+        ax.tick_params(axis="y", labelcolor=color)
 
         handles.append(line)
         labels.append(signal)
 
     # ---------- categorical signals ----------
-    def fraction_in_ranges(fraction_label: str, ranges: list[tuple[str, str]],
-    ) -> bool:
+    def fraction_in_ranges(fraction_label: str, ranges: list[tuple[str, str]]) -> bool:
         for start, end in ranges:
             if start <= fraction_label <= end:
                 return True
@@ -802,30 +722,28 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
             selected_x.append(x)
 
         if selected_x:
-            pool_patch = ax1.axvspan(
-                min(selected_x),
-                max(selected_x),
-                color="gold",
-                alpha=0.25,
-                label="Collected fractions",)
+            pool_patch = ax1.axvspan(min(selected_x), max(selected_x), color="gold", alpha=0.25,
+                                     label="Collected fractions")
 
     ax1.set_xlim(left=0)
     ax1.set_xlabel("Volume [ml]")
 
-    if title is None:
-        ax1.set_title(run_name)
-    else:
-        ax1.set_title(title)
+    if show_title:
+        if title is None:
+            ax1.set_title(run_name)
+        else:
+            ax1.set_title(title)
 
     if selected_x:
         handles.append(pool_patch)
         labels.append("Collected fractions")
     if handles:
-        ax1.legend(handles, labels, loc="upper right",)
+        ax1.legend(handles, labels, loc="upper right")
+
     plt.tight_layout()
 
     if save_path is not None:
-        plt.savefig(save_path, dpi=300)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight", pad_inches=0.3)
         print(f"Plot written to: {save_path}")
     else:
         plt.show()
@@ -1035,25 +953,22 @@ def load_bli_dataset(folder: str | Path) -> dict:
 
 
 def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], run_display_names: list[str] | None = None,
-                  save_path=None, title: str | None = None,
-):
-
+                  save_path=None, title: str | None = None, show_title: bool = False):
     if date not in bli_data:
         raise KeyError(f"Date '{date}' not found.")
     if run_display_names is not None:
         if len(run_display_names) != len(run_names):
             raise ValueError("run_display_names must have the same length as run_names.")
 
+    # --- STYLE APPLY ---
+    set_publication_style(size="standard", figsize=(10, 6))
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for i, run_name in enumerate(run_names):
         if run_name not in bli_data[date]["runs"]:
             raise KeyError(f"Run '{run_name}' not found for date '{date}'.")
 
-        label = (
-            run_display_names[i]
-            if run_display_names is not None
-            else run_name)
+        label = (run_display_names[i] if run_display_names is not None else run_name)
 
         if "mClover Baseline" in label:
             line_color = "lightgray"
@@ -1067,61 +982,40 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], run_display_n
 
         df = bli_data[date]["runs"][run_name]
         ax.plot(
-            df["Time (s)"],
-            df["Binding (nm)"],
-            linewidth=2,
-            color=line_color,
-            zorder=zorder,
-            label=label, )
+            df["Time (s)"], df["Binding (nm)"],
+            linewidth=2, color=line_color, zorder=zorder, label=label)
 
     steps = bli_data[date]["steps"]
     cumulative_time = 0
 
     for step_name, duration in steps:
-        ax.axvline(
-            cumulative_time,
-            color="red",
-            linestyle="--",
-            alpha=0.5,)
+        ax.axvline(cumulative_time, color="red", linestyle="--", alpha=0.5)
         x_center = (cumulative_time + duration / 2)
 
         ax.text(
-            x_center,
-            0.02,
-            step_name,
-            transform=ax.get_xaxis_transform(),
-            ha="center",
-            va="bottom",
-            fontsize=8,
-            color="darkred",
-            bbox=dict(
-                facecolor="white",
-                edgecolor="none",
-                alpha=0.8,
-                pad=1.5,
-            ),
+            x_center, 0.005, step_name,
+            transform=ax.get_xaxis_transform(), ha="center", va="bottom",
+            fontsize=14, color="darkred", bbox=dict(facecolor="white", edgecolor="none", alpha=0.8, pad=1.5)
         )
-
         cumulative_time += duration
 
     plt.xlabel("Time [s]")
     plt.ylabel("Binding [nm]")
-
     plt.xlim(0, cumulative_time)
     plt.ylim(-0.1, 1.2)
 
-    if title is not None:
-        plt.title(title)
-    else:
-        plt.title(f"BLI ({date})")
+    if show_title:
+        if title is not None:
+            plt.title(title)
+        else:
+            plt.title(f"BLI ({date})")
 
     plt.legend()
     plt.grid(alpha=0.3)
-
     plt.tight_layout()
 
     if save_path is not None:
-        plt.savefig(save_path, dpi=300,)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight", pad_inches=0.3)
         print(f"Plot written to: {save_path}")
     else:
         plt.show()
@@ -1130,9 +1024,9 @@ def plot_bli_runs(bli_data: dict, date: str, run_names: list[str], run_display_n
 
 
 def plot_bli_phase_runs(bli_data: dict, runs: list[tuple[str, str]], phases: list[str],
-                        run_display_names: list[str] | None = None, subtract_baseline: list[tuple[str, str]] | None = None,
-                        save_path=None, title: str | None = None,
-):
+                        run_display_names: list[str] | None = None,
+                        subtract_baseline: list[tuple[str, str]] | None = None,
+                        save_path=None, title: str | None = None, show_title: bool = False):
     if run_display_names is not None:
         if len(run_display_names) != len(runs):
             raise ValueError("run_display_names must have the same length as runs.")
@@ -1140,6 +1034,8 @@ def plot_bli_phase_runs(bli_data: dict, runs: list[tuple[str, str]], phases: lis
         if len(subtract_baseline) != len(runs):
             raise ValueError("subtract_baseline must have the same length as runs.")
 
+    # --- STYLE APPLY ---
+    set_publication_style(size="standard", figsize=(10, 6))
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for i, (date, run_name) in enumerate(runs):
@@ -1156,18 +1052,17 @@ def plot_bli_phase_runs(bli_data: dict, runs: list[tuple[str, str]], phases: lis
         current_time = 0
 
         for step_name, duration in steps:
-            phase_ranges[step_name] = (current_time, current_time + duration,)
+            phase_ranges[step_name] = (current_time, current_time + duration)
             current_time += duration
 
         missing_phases = [phase for phase in phases if phase not in phase_ranges]
-
         if missing_phases:
             raise KeyError(f"Unknown phase(s): {missing_phases}")
 
         phase_intervals = [phase_ranges[phase] for phase in phases]
 
         df = bli_data[date]["runs"][run_name]
-        mask = np.zeros(len(df), dtype=bool,)
+        mask = np.zeros(len(df), dtype=bool)
 
         for start, end in phase_intervals:
             mask |= ((df["Time (s)"] >= start) & (df["Time (s)"] <= end))
@@ -1184,34 +1079,29 @@ def plot_bli_phase_runs(bli_data: dict, runs: list[tuple[str, str]], phases: lis
 
             baseline_df = bli_data[baseline_date]["runs"][baseline_name]
 
-            baseline_values = np.interp(
-                df_plot["Time (s)"],
-                baseline_df["Time (s)"],
-                baseline_df["Binding (nm)"],)
+            baseline_values = np.interp(df_plot["Time (s)"], baseline_df["Time (s)"], baseline_df["Binding (nm)"])
             df_plot["Binding (nm)"] -= baseline_values
 
         ax.plot(
-            df_plot["Time (s)"],
-            df_plot["Binding (nm)"],
-            linewidth=2,
-            color=line_color,
-            label=label, )
+            df_plot["Time (s)"], df_plot["Binding (nm)"],
+            linewidth=2, color=line_color, label=label)
 
     ax.set_xlabel("Time [s]")
     ax.set_xlim(300, 660)
     ax.set_ylabel("Binding [nm]")
 
-    if title is not None:
-        ax.set_title(title)
-    else:
-        ax.set_title("BLI Association Phase Comparison")
+    if show_title:
+        if title is not None:
+            ax.set_title(title)
+        else:
+            ax.set_title("BLI Association Phase Comparison")
 
     ax.legend()
     ax.grid(alpha=0.3)
     plt.tight_layout()
 
     if save_path is not None:
-        plt.savefig(save_path, dpi=300,)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight", pad_inches=0.3)
         print(f"Plot written to: {save_path}")
     else:
         plt.show()
@@ -1362,206 +1252,104 @@ def two_peak_model(x, offset, slope, a1, c1, s1, a2, c2, s2,):
 
 def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str, smooth: bool = True,
         show_tm: bool = False, show_values: bool = False, save_path=None, title: str | None = None,
-):
+        show_title: bool = False):
 
     if experiment not in supr_dsf_data:
         raise KeyError(f"Experiment '{experiment}' not found.")
 
     experiment_data = supr_dsf_data[experiment]
-
-    sample_keys = [key
-        for key in experiment_data
-        if key.endswith(f"_{sample}")]
+    sample_keys = [key for key in experiment_data if key.endswith(f"_{sample}")]
 
     if not sample_keys:
         raise KeyError(f"No samples found for '{sample}'.")
 
+    # --- STYLE APPLY ---
+    set_publication_style(size="standard", figsize=(8, 5))
     plt.figure(figsize=(8, 5))
 
     base_color = get_variant_color(sample)
-
     alphas = np.linspace(0.3, 0.9, len(sample_keys))
 
     for i, sample_key in enumerate(sample_keys):
         df = experiment_data[sample_key]
-        plt.scatter(
-            df["Temperature"],
-            df[signal],
-            color=base_color,
-            alpha=alphas[i],
-            s=10,
-            label=None)
+        plt.scatter(df["Temperature"], df[signal], color=base_color, alpha=alphas[i], s=10, label=None)
+        plt.plot(df["Temperature"], df[signal], color=base_color, alpha=alphas[i], linewidth=1.5, label=f"Replicate {i + 1}")
 
-        plt.plot(
-            df["Temperature"],
-            df[signal],
-            color=base_color,
-            alpha=alphas[i],
-            linewidth=1.5,
-            label=f"Replicate {i + 1}"
-        )
-
-    tm1 = None
-    tm2 = None
-    tonset = None
+    tm1, tm2, tonset = None, None, None
 
     if smooth and signal == "dBcm":
-
         reference_df = experiment_data[sample_keys[0]]
         x = reference_df["Temperature"].to_numpy()
-        y_stack = np.vstack([
-            experiment_data[key][signal].to_numpy()
-            for key in sample_keys])
+        y_stack = np.vstack([experiment_data[key][signal].to_numpy() for key in sample_keys])
+        y = np.mean(y_stack, axis=0)
 
-        y = np.mean(y_stack, axis=0,)
-
-        peak_indices, _ = find_peaks(y, prominence=np.std(y) * 0.5,)
+        peak_indices, _ = find_peaks(y, prominence=np.std(y) * 0.5)
         peak_indices = peak_indices[np.argsort(y[peak_indices])[::-1]]
-
-        # remove pseudo peaks below the baseline
-        peak_indices = peak_indices[y[peak_indices] > 0]
+        peak_indices = peak_indices[y[peak_indices] > 0]  # remove pseudo peaks below the baseline
 
         n_transitions = min(len(peak_indices), 2)
 
-        if n_transitions == 0:
-            peak = np.argmax(y)
+        if n_transitions == 0 or n_transitions == 1:
+            peak = peak_indices[0] if n_transitions == 1 else np.argmax(y)
             p0 = [np.min(y), 0, y[peak], x[peak], 2]
-
             params, _ = curve_fit(one_peak_model, x, y, p0=p0,
-                bounds=(
-                    [-np.inf, -np.inf, 0, min(x), 0],
-                    [np.inf, np.inf, np.inf, max(x), 30],),
-                maxfev=10000,)
-
-            fit_y = one_peak_model(x, *params,)
-            tonset = calculate_tonset_dbcm(
-                fit_x=x,
-                fit_y=fit_y,
-                peak_fraction=0.05,
-            )
-            tm1 = params[3]
-
-        elif n_transitions == 1:
-            peak = peak_indices[0]
-            p0 = [np.min(y), 0, y[peak], x[peak], 2]
-
-            params, _ = curve_fit(one_peak_model, x, y, p0=p0,
-                bounds=(
-                    [-np.inf, -np.inf, 0, min(x), 0],
-                    [np.inf, np.inf, np.inf, max(x), 30],),
-                maxfev=10000,)
-
-            fit_y = one_peak_model(x, *params,)
-            tonset = calculate_tonset_dbcm(
-                fit_x=x,
-                fit_y=fit_y,
-                peak_fraction=0.05,
-            )
+                                  bounds=([-np.inf, -np.inf, 0, min(x), 0], [np.inf, np.inf, np.inf, max(x), 30]),
+                                  maxfev=10000)
+            fit_y = one_peak_model(x, *params)
+            tonset = calculate_tonset_dbcm(fit_x=x, fit_y=fit_y, peak_fraction=0.05)
             tm1 = params[3]
 
         else:
-
-            peak1 = peak_indices[0]
-            peak2 = peak_indices[1]
-
+            peak1, peak2 = peak_indices[0], peak_indices[1]
             if x[peak1] > x[peak2]:
                 peak1, peak2 = peak2, peak1
 
-            p0 = [np.min(y), 0, y[peak1], x[peak1], 2, y[peak2], x[peak2], 2,]
-
+            p0 = [np.min(y), 0, y[peak1], x[peak1], 2, y[peak2], x[peak2], 2]
             params, _ = curve_fit(two_peak_model, x, y, p0=p0,
-                bounds=(
-                    [-np.inf, -np.inf,
-                     0, min(x), 0,
-                     0, min(x), 0,],
-                    [np.inf, np.inf,
-                     np.inf, max(x), 30,
-                     np.inf, max(x), 30,],
-                ),
-                maxfev=10000,)
+                                  bounds=([-np.inf, -np.inf, 0, min(x), 0, 0, min(x), 0],
+                                          [np.inf, np.inf, np.inf, max(x), 30, np.inf, max(x), 30]),
+                                  maxfev=10000)
+            fit_y = two_peak_model(x, *params)
+            tonset = calculate_tonset_dbcm(fit_x=x, fit_y=fit_y, peak_fraction=0.05)
+            tm1, tm2 = params[3], params[6]
 
-            fit_y = two_peak_model(x, *params,)
-            tonset = calculate_tonset_dbcm(
-                fit_x=x,
-                fit_y=fit_y,
-                peak_fraction=0.05,
-            )
-
-            tm1 = params[3]
-            tm2 = params[6]
-
-        plt.plot(
-            x,
-            fit_y,
-            color="black",
-            linewidth=2.5,
-            label="Peak fit",
-            zorder=10,
-            alpha=1.0,)
+        plt.plot(x, fit_y, color="black", linewidth=2.5, label="Peak fit", zorder=10, alpha=1.0)
 
         if show_tm:
-            plt.axvline(
-                tm1,
-                color="red",
-                linestyle="--",
-                linewidth=1.5,
-                label="$T_{m1}$",)
-
+            plt.axvline(tm1, color="red", linestyle="--", linewidth=1.5, label="$T_{m1}$")
             if tm2 is not None:
-                plt.axvline(
-                    tm2,
-                    color="darkred",
-                    linestyle="--",
-                    linewidth=1.5,
-                    label="$T_{m2}$",)
-
+                plt.axvline(tm2, color="darkred", linestyle="--", linewidth=1.5, label="$T_{m2}$")
             if tonset is not None:
-                plt.axvline(
-                    tonset,
-                    color="darkorange",
-                    linestyle="--",
-                    linewidth=1.5,
-                    label="$T_{onset}$",)
+                plt.axvline(tonset, color="darkorange", linestyle="--", linewidth=1.5, label="$T_{onset}$")
 
     if show_values:
         text_lines = []
-
-        if tonset is not None:
-            text_lines.append(f"$T_{{onset}}$ = {tonset:.1f} °C")
-        if tm1 is not None:
-            text_lines.append(f"$T_{{m1}}$ = {tm1:.1f} °C")
-        if tm2 is not None:
-            text_lines.append(f"$T_{{m2}}$ = {tm2:.1f} °C")
+        if tonset is not None: text_lines.append(f"$T_{{onset}}$ = {tonset:.1f} °C")
+        if tm1 is not None: text_lines.append(f"$T_{{m1}}$ = {tm1:.1f} °C")
+        if tm2 is not None: text_lines.append(f"$T_{{m2}}$ = {tm2:.1f} °C")
 
         if text_lines:
-            plt.gca().text(
-                0.98,
-                0.98,
-                "\n".join(text_lines),
-                transform=plt.gca().transAxes,
-                ha="right",
-                va="top",
-                bbox=dict(
-                    facecolor="white",
-                    edgecolor="black",
-                    alpha=0.9, ),
-            )
+            # Explicitly added fontsize=14 to make the temperature box readable in grids
+            plt.gca().text(0.98, 0.98, "\n".join(text_lines), transform=plt.gca().transAxes,
+                           ha="right", va="top", fontsize=14,
+                           bbox=dict(facecolor="white", edgecolor="black", alpha=0.9))
 
     plt.xlim(left=min(experiment_data[sample_keys[0]]["Temperature"]))
     plt.xlabel("Temperature [°C]")
     plt.ylabel(signal)
 
-    if title:
-        plt.title(title)
-    else:
-        plt.title(f"{sample} | {signal}")
+    if show_title:
+        if title:
+            plt.title(title)
+        else:
+            plt.title(f"{sample} | {signal}")
 
     plt.legend()
     plt.grid(alpha=0.3)
     plt.tight_layout()
 
     if save_path is not None:
-        plt.savefig(save_path, dpi=300,)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight", pad_inches=0.3)
         print(f"Plot written to: {save_path}")
     else:
         plt.show()
@@ -1787,29 +1575,9 @@ def load_sec_mals_data(save_dir_wet_lab_sec_mals: str | Path,
 
 def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, run_display_names: list[str] | None = None,
                         show_uv: bool = True, show_mw: bool = True, save_path=None, title: str | None = None,
-):
+                        show_title: bool = False):
     """
     Plot SEC-MALS chromatograms and/or MALS mass profiles.
-
-    Parameters
-    ----------
-    sec_mals_data : dict
-        Output from load_sec_mals_data()
-
-    samples : list[str] | None
-        Samples to plot.
-
-    show_uv : bool
-        Plot UV chromatograms.
-
-    show_mw : bool
-        Plot molecular weight profiles.
-
-    save_path : Path | str | None
-        Output location.
-
-    title : str | None
-        Plot title.
     """
 
     if not show_uv and not show_mw:
@@ -1822,6 +1590,8 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, r
     else:
         label_map = {s: s for s in samples}
 
+    # --- STYLE APPLY ---
+    set_publication_style(size="standard", figsize=(9, 5))
     fig, ax_uv = plt.subplots(figsize=(9, 5))
     ax_mw = None
 
@@ -1835,9 +1605,7 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, r
     # --------------------------------------------------
 
     if show_uv:
-
         easi_graph = sec_mals_data["easi_graph"]
-
         if easi_graph is None:
             raise ValueError("No EASI graph data available.")
 
@@ -1845,10 +1613,8 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, r
 
         for sample in samples:
             uv_column = None
-
             for column in easi_graph.columns:
                 col = str(column)
-
                 if "(UV)" not in col:
                     continue
 
@@ -1866,15 +1632,11 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, r
                 print(f"Skipping {sample}: no UV column found")
                 continue
 
-            valid = (easi_graph[[time_column, uv_column]].dropna())
-
+            valid = easi_graph[[time_column, uv_column]].dropna()
             ax_uv.plot(
-                valid[time_column],
-                valid[uv_column],
+                valid[time_column], valid[uv_column],
                 color=get_variant_color(label_map[sample]),
-                linewidth=2,
-                linestyle="-",
-                label=label_map[sample],)
+                linewidth=2, linestyle="-", label=label_map[sample])
 
         ax_uv.set_ylabel("UV Absorbance [%]")
 
@@ -1884,24 +1646,19 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, r
     mw_summary = {}
 
     if show_mw:
-
         for sample in samples:
-
             if sample not in sec_mals_data["samples"]:
                 print(f"Skipping {sample}: sample not found")
                 continue
 
             sample_data = sec_mals_data["samples"][sample]
-
             if "mass_vs_volume" not in sample_data:
                 print(f"Skipping {sample}: no mass_vs_volume export")
                 continue
 
             df = sample_data["mass_vs_volume"].copy()
-
-            df["time_min"] = pd.to_numeric(df["time_min"], errors="coerce",)
-            df["molar_mass_g_mol"] = pd.to_numeric(df["molar_mass_g_mol"], errors="coerce",)
-
+            df["time_min"] = pd.to_numeric(df["time_min"], errors="coerce")
+            df["molar_mass_g_mol"] = pd.to_numeric(df["molar_mass_g_mol"], errors="coerce")
             df = df.dropna()
 
             time = df["time_min"]
@@ -1909,20 +1666,14 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, r
 
             # handle BSA multi-region export
             breaks = np.where(np.diff(time) < 0)[0]
-
             segments = np.split(np.arange(len(time)), breaks + 1)
 
             for seg_idx, segment in enumerate(segments):
                 ax_mw.plot(
-                    time.iloc[segment],
-                    mass.iloc[segment],
-                    color=(
-                        get_variant_color("BSA")
-                        if show_uv and sample == "BSA"
-                        else get_variant_color(label_map[sample])),
+                    time.iloc[segment], mass.iloc[segment],
+                    color=(get_variant_color("BSA") if show_uv and sample == "BSA" else get_variant_color(label_map[sample])),
                     linestyle="--" if show_uv else "-",
-                    linewidth=2,
-                    alpha=0.9,)
+                    linewidth=2, alpha=0.9)
 
                 time_seg = time.iloc[segment]
                 mass_seg = mass.iloc[segment]
@@ -1932,81 +1683,53 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, r
                     mw_summary[sample] = mw_mean
 
                 if not show_uv:
-
                     center_idx = len(time_seg) // 2
                     x_center = time_seg.iloc[center_idx]
                     y_center = mass_seg.iloc[center_idx]
 
-                    ax_mw.scatter(
-                        x_center,
-                        y_center,
-                        color="red",
-                        s=10,
-                        zorder=10,)
+                    ax_mw.scatter(x_center, y_center, color="red", s=10, zorder=10)
 
                     if sample == "BSA":
-                        bsa_offsets = [
-                            (1, 4),  # small Peak
-                            (5, -7),  # big Peak
-                        ]
+                        bsa_offsets = [(1, 4), (5, -7)]
                         dx, dy = bsa_offsets[min(seg_idx, 1)]
-
                     else:
-                        offsets = {
-                            "V1": (1, 4),
-                            "V12": (1, 4),
-                            "V13": (1, 4),
-                            "V14": (-43, 4),}
+                        offsets = {"V1": (1, 4), "V12": (1, 4), "V13": (1, 4), "V14": (-43, 4)}
                         dx, dy = offsets.get(sample, (1, 3))
 
-
                     ax_mw.annotate(
-                        f"{mw_mean:.1f} kDa",
-                        (x_center, y_center),
-                        xytext=(dx, dy),
-                        textcoords="offset points",
-                        fontsize=9,)
+                        f"{mw_mean:.1f} kDa", (x_center, y_center),
+                        xytext=(dx, dy), textcoords="offset points", fontsize=9)
 
         ax_mw.set_ylabel("Molecular Weight [kDa]")
 
     # --------------------------------------------------
     # Layout
     # --------------------------------------------------
-
     ax_uv.set_xlabel("Time [min]")
     ax_uv.set_xlim(10, 30)
     ax_uv.xaxis.set_major_locator(MultipleLocator(5))
 
-    if title is not None:
-        ax_uv.set_title(title)
-    else:
-
-        if show_uv and show_mw:
-            ax_uv.set_title("SEC-MALS Chromatograms and Molecular Weight Profiles")
-        elif show_uv:
-            ax_uv.set_title("SEC-MALS UV Chromatograms")
+    if show_title:
+        if title is not None:
+            ax_uv.set_title(title)
         else:
-            ax_uv.set_title("SEC-MALS Molecular Weight Profiles with the calculated mean MW")
+            if show_uv and show_mw:
+                ax_uv.set_title("SEC-MALS Chromatograms and Molecular Weight Profiles")
+            elif show_uv:
+                ax_uv.set_title("SEC-MALS UV Chromatograms")
+            else:
+                ax_uv.set_title("SEC-MALS Molecular Weight Profiles with calculated mean MW")
 
     handles = [
-        plt.Line2D(
-            [0],
-            [0],
-            color=get_variant_color(label_map[sample]),
-            linewidth=2,
-            label=label_map[sample],)
+        plt.Line2D([0], [0], color=get_variant_color(label_map[sample]), linewidth=2, label=label_map[sample])
         for sample in samples]
 
-    ax_uv.legend(handles=handles, loc="best",)
+    ax_uv.legend(handles=handles, loc="best")
     ax_uv.grid(alpha=0.3)
     plt.tight_layout()
 
     if save_path is not None:
-        plt.savefig(
-            save_path,
-            dpi=300,
-            bbox_inches="tight",)
-
+        plt.savefig(save_path, dpi=300, bbox_inches="tight", pad_inches=0.3)
         print(f"Plot written to: {save_path}")
     else:
         plt.show()

@@ -116,10 +116,10 @@ DEBUG = False
 general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
-structure_prediction_analysis_bool = True # does not work if old pdb files are present
+structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
-wet_lab_analysis_bool = False
+wet_lab_analysis_bool = True
 figure_creation_bool = True
 
 show_plot_titles = False
@@ -845,6 +845,8 @@ if MD_analysis_bool:
     # 1. Apo
     if apo_runs:
         print(f"[Overview] Generating APO plots for {len(apo_runs)} runs...")
+
+        # Panel A: Legende AN, X-Label AN
         plot_combined_rmsd(
             run_paths_dict=all_generated_paths,
             target_runs=apo_runs,
@@ -852,20 +854,24 @@ if MD_analysis_bool:
             comparison_ids=pure_comparison_ids,
             save_path=path_md_overview_rmsd_apo,
             title="Combined RMSD (Apo State)",
-            rolling_window=50)
+            rolling_window=50,
+            show_title=False, show_legend=True, show_xlabels=True)
 
+        # Panel B: Legende AUS, X-Label AN
         plot_combined_rmsf(
             run_paths_dict=all_generated_paths,
             target_runs=apo_runs,
             tested_ids=pure_tested_ids,
             comparison_ids=pure_comparison_ids,
             save_path=path_md_overview_rmsf_apo,
-            title="Combined RMSF (Apo State)")
+            title="Combined RMSF (Apo State)",
+            show_title=False, show_legend=False, show_xlabels=True)
 
         # 2. Holo
         if holo_runs:
             print(f"[Overview] Generating HOLO plots for {len(holo_runs)} runs...")
 
+            # Panel C: Legende AUS, X-Label AN
             plot_combined_rmsd(
                 run_paths_dict=all_generated_paths,
                 target_runs=holo_runs,
@@ -873,16 +879,20 @@ if MD_analysis_bool:
                 comparison_ids=pure_comparison_ids,
                 save_path=path_md_overview_rmsd_holo,
                 title="Combined RMSD (Holo State)",
-                rolling_window=50)
+                rolling_window=50,
+                show_title=False, show_legend=False, show_xlabels=True)
 
+            # Panel D: Legende AUS, X-Label AN
             plot_combined_rmsf(
                 run_paths_dict=all_generated_paths,
                 target_runs=holo_runs,
                 tested_ids=pure_tested_ids,
                 comparison_ids=pure_comparison_ids,
                 save_path=path_md_overview_rmsf_holo,
-                title="Combined RMSF (Holo State)")
+                title="Combined RMSF (Holo State)",
+                show_title=False, show_legend=False, show_xlabels=True)
 
+            # Panel E: Legende AUS, X-Label AN
             plot_combined_binder_target_distance(
                 run_paths_dict=all_generated_paths,
                 target_runs=holo_runs,
@@ -890,8 +900,10 @@ if MD_analysis_bool:
                 comparison_ids=pure_comparison_ids,
                 save_path=path_md_overview_binder_dist,
                 title="Combined Binder-Target Distance",
-                rolling_window=50)
+                rolling_window=50,
+                show_title=False, show_legend=False, show_xlabels=True)
 
+            # Panel F: Legende AUS, X-Label AN
             plot_combined_minimum_contact_distance(
                 run_paths_dict=all_generated_paths,
                 target_runs=holo_runs,
@@ -899,7 +911,8 @@ if MD_analysis_bool:
                 comparison_ids=pure_comparison_ids,
                 save_path=path_md_overview_min_dist,
                 title="Combined Minimum Contact Distance",
-                rolling_window=50)
+                rolling_window=50,
+                show_title=False, show_legend=False, show_xlabels=True)
 
 
 
@@ -1310,12 +1323,11 @@ if figure_creation_bool:
             "C": path_wet_sds_page,        },
         layout=
         """
-        AB
-        CC
-        CC
+        AAACC
+        BBBCC
         """,
         figure_width_px=3500,
-        panel_label_size=60,
+        panel_label_size=80,
         row_spacing=30,
         col_spacing=30, )
 
@@ -1334,13 +1346,13 @@ if figure_creation_bool:
         },
         layout=
         """
-        ABCD
-        EEFF
-        GGGG
-        HHHH
+        AB
+        CD
+        EF
+        GH
         """,
         figure_width_px=4500,
-        panel_label_size=70,
+        panel_label_size=100,
         row_spacing=30,
         col_spacing=30, )
 

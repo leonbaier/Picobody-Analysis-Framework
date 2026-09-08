@@ -9,6 +9,8 @@ import pandas as pd
 from MDAnalysis.analysis import rms, align, distances
 import numpy as np
 
+from io_utils import set_publication_style
+
 
 def get_archived_md_runs(md_archive_root: Path,
 ) -> list[Path]:
@@ -373,21 +375,16 @@ def create_minimum_contact_distance_analysis(u: mda.Universe, output_dir: Path, 
     plt.close()
 
 
-import pandas as pd
-import matplotlib.pyplot as plt
-from pathlib import Path
-from itertools import cycle
-
-
 def plot_combined_rmsd(run_paths_dict: dict, target_runs: list, tested_ids: list, comparison_ids: list,
-                       save_path: Path, title: str = "Combined RMSD", rolling_window: int = 50):
-    """
-    Plots multiple RMSD trajectories in a single figure with color grouping.
-    """
+                       save_path: Path, title: str = "Combined RMSD", rolling_window: int = 50,
+                       show_title: bool = True, show_legend: bool = True, show_xlabels: bool = True):
+    set_publication_style(size="standard", figsize=(10, 6))
     plt.figure(figsize=(10, 6))
 
     tested_styles = cycle(['-', '--', '-.', ':'])
     comp_styles = cycle(['-', '--', '-.', ':'])
+
+    max_time_ns = 0
 
     for run_name in target_runs:
         if run_name in run_paths_dict and "rmsd_csv" in run_paths_dict[run_name]:
@@ -407,31 +404,48 @@ def plot_combined_rmsd(run_paths_dict: dict, target_runs: list, tested_ids: list
                 color = "gray"
                 ls = "-"
 
+            # Umrechnung in Nanosekunden
+            time_ns = df["Time_ps"] / 1000
+            max_time_ns = max(max_time_ns, time_ns.max())
+
             if rolling_window > 1:
                 y_vals = df["RMSD_Angstrom"].rolling(window=rolling_window, min_periods=1).mean()
             else:
                 y_vals = df["RMSD_Angstrom"]
 
-            plt.plot(df["Time_ps"], y_vals, label=label, color=color, linestyle=ls, linewidth=1.5, alpha=0.85)
+            plt.plot(time_ns, y_vals, label=label, color=color, linestyle=ls, linewidth=1.5, alpha=0.85)
 
-    plt.xlabel("Time (ps)")
     plt.ylabel("RMSD (Å)")
-    plt.title(title)
 
-    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+    if show_xlabels:
+        plt.xlabel("Time (ns)")
+    else:
+        ax = plt.gca()
+        ax.set_xticklabels([])
+
+    # Harte 50er Ticks setzen
+    if max_time_ns > 0:
+        plt.xlim(0, max_time_ns)
+        plt.xticks(np.arange(0, max_time_ns + 1, 50))
+
+    if show_title:
+        plt.title(title)
+
+    if show_legend:
+        # Legende INNEN, z.B. unten rechts (meistens frei bei RMSD)
+        plt.legend(loc='lower right', framealpha=0.9)
+
     plt.tight_layout()
-
     save_path = Path(save_path).resolve()
     save_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(str(save_path), dpi=300)
+    plt.savefig(str(save_path), dpi=300, bbox_inches="tight", pad_inches=0.3)
     plt.close()
 
 
 def plot_combined_rmsf(run_paths_dict: dict, target_runs: list, tested_ids: list, comparison_ids: list,
-                       save_path: Path, title: str = "Combined RMSF", highlight_span: tuple = None):
-    """
-    Plots multiple RMSF profiles in a single figure with color grouping.
-    """
+                       save_path: Path, title: str = "Combined RMSF", highlight_span: tuple = None,
+                       show_title: bool = True, show_legend: bool = True, show_xlabels: bool = True):
+    set_publication_style(size="standard", figsize=(10, 6))
     plt.figure(figsize=(10, 6))
 
     tested_styles = cycle(['-', '--', '-.', ':'])
@@ -475,30 +489,40 @@ def plot_combined_rmsf(run_paths_dict: dict, target_runs: list, tested_ids: list
     if highlight_span is not None:
         plt.axvspan(highlight_span[0], highlight_span[1], color='grey', alpha=0.2, label='Knob Region')
 
-    plt.xlabel("Residue Index")
     plt.ylabel("RMSF (Å)")
-    plt.title(title)
 
-    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+    if show_xlabels:
+        plt.xlabel("Residue Index")
+    else:
+        ax = plt.gca()
+        ax.set_xticklabels([])
+
+    if show_title:
+        plt.title(title)
+
+    if show_legend:
+        # Legende INNEN oben rechts bei RMSF
+        plt.legend(loc='upper right', framealpha=0.9)
+
     plt.tight_layout()
-
     save_path = Path(save_path).resolve()
     save_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(str(save_path), dpi=300)
+    plt.savefig(str(save_path), dpi=300, bbox_inches="tight", pad_inches=0.3)
     plt.close()
 
 
 def plot_combined_binder_target_distance(run_paths_dict: dict, target_runs: list, tested_ids: list,
-                                         comparison_ids: list,
-                                         save_path: Path, title: str = "Combined Binder-Target Distance",
-                                         rolling_window: int = 50):
-    """
-    Plots multiple Binder-Target Center of Mass distances in a single figure.
-    """
+                                         comparison_ids: list, save_path: Path,
+                                         title: str = "Combined Binder-Target Distance",
+                                         rolling_window: int = 50, show_title: bool = True, show_legend: bool = True,
+                                         show_xlabels: bool = True):
+    set_publication_style(size="standard", figsize=(10, 6))
     plt.figure(figsize=(10, 6))
 
     tested_styles = cycle(['-', '--', '-.', ':'])
     comp_styles = cycle(['-', '--', '-.', ':'])
+
+    max_time_ns = 0
 
     for run_name in target_runs:
         if run_name in run_paths_dict and "binder_dist_csv" in run_paths_dict[run_name]:
@@ -521,37 +545,53 @@ def plot_combined_binder_target_distance(run_paths_dict: dict, target_runs: list
                 color = "gray"
                 ls = "-"
 
+            time_ns = df["Time_ps"] / 1000
+            max_time_ns = max(max_time_ns, time_ns.max())
+
             if rolling_window > 1:
                 y_vals = df["Distance_Angstrom"].rolling(window=rolling_window, min_periods=1).mean()
             else:
                 y_vals = df["Distance_Angstrom"]
 
-            plt.plot(df["Time_ps"], y_vals, label=label, color=color, linestyle=ls, linewidth=1.5, alpha=0.85)
+            plt.plot(time_ns, y_vals, label=label, color=color, linestyle=ls, linewidth=1.5, alpha=0.85)
 
-    plt.xlabel("Time (ps)")
     plt.ylabel("Distance (Å)")
-    plt.title(title)
 
-    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+    if show_xlabels:
+        plt.xlabel("Time (ns)")
+    else:
+        ax = plt.gca()
+        ax.set_xticklabels([])
+
+    if max_time_ns > 0:
+        plt.xlim(0, max_time_ns)
+        plt.xticks(np.arange(0, max_time_ns + 1, 50))
+
+    if show_title:
+        plt.title(title)
+
+    if show_legend:
+        plt.legend(loc='upper right', framealpha=0.9)
+
     plt.tight_layout()
-
     save_path = Path(save_path).resolve()
     save_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(str(save_path), dpi=300)
+    plt.savefig(str(save_path), dpi=300, bbox_inches="tight", pad_inches=0.3)
     plt.close()
 
 
 def plot_combined_minimum_contact_distance(run_paths_dict: dict, target_runs: list, tested_ids: list,
-                                           comparison_ids: list,
-                                           save_path: Path, title: str = "Combined Minimum Contact Distance",
-                                           rolling_window: int = 50):
-    """
-    Plots multiple Minimum Contact Distances in a single figure.
-    """
+                                           comparison_ids: list, save_path: Path,
+                                           title: str = "Combined Minimum Contact Distance",
+                                           rolling_window: int = 50, show_title: bool = True, show_legend: bool = True,
+                                           show_xlabels: bool = True):
+    set_publication_style(size="standard", figsize=(10, 6))
     plt.figure(figsize=(10, 6))
 
     tested_styles = cycle(['-', '--', '-.', ':'])
     comp_styles = cycle(['-', '--', '-.', ':'])
+
+    max_time_ns = 0
 
     for run_name in target_runs:
         if run_name in run_paths_dict and "min_dist_csv" in run_paths_dict[run_name]:
@@ -574,23 +614,38 @@ def plot_combined_minimum_contact_distance(run_paths_dict: dict, target_runs: li
                 color = "gray"
                 ls = "-"
 
+            time_ns = df["Time_ps"] / 1000
+            max_time_ns = max(max_time_ns, time_ns.max())
+
             if rolling_window > 1:
                 y_vals = df["Min_Distance_Angstrom"].rolling(window=rolling_window, min_periods=1).mean()
             else:
                 y_vals = df["Min_Distance_Angstrom"]
 
-            plt.plot(df["Time_ps"], y_vals, label=label, color=color, linestyle=ls, linewidth=1.5, alpha=0.85)
+            plt.plot(time_ns, y_vals, label=label, color=color, linestyle=ls, linewidth=1.5, alpha=0.85)
 
-    plt.xlabel("Time (ps)")
-    plt.ylabel("Minimum Contact Distance (Å)")
-    plt.title(title)
+    plt.ylabel("Minimum atom distance (Å)")
 
-    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+    if show_xlabels:
+        plt.xlabel("Time (ns)")
+    else:
+        ax = plt.gca()
+        ax.set_xticklabels([])
+
+    if max_time_ns > 0:
+        plt.xlim(0, max_time_ns)
+        plt.xticks(np.arange(0, max_time_ns + 1, 50))
+
+    if show_title:
+        plt.title(title)
+
+    if show_legend:
+        plt.legend(loc='upper right', framealpha=0.9)
+
     plt.tight_layout()
-
     save_path = Path(save_path).resolve()
     save_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(str(save_path), dpi=300)
+    plt.savefig(str(save_path), dpi=300, bbox_inches="tight", pad_inches=0.3)
     plt.close()
 
 
