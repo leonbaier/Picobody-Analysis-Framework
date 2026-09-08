@@ -13,6 +13,8 @@ from Bio import SeqIO
 from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB import PDBParser
 
+from io_utils import set_publication_style
+
 
 def get_negative_binder_ids_from_vx_name(excel_path: Path, binders: str | list[str],
 ) -> dict[str, str]:
@@ -412,9 +414,10 @@ def normalize_model_id(mid: str) -> str:
     return mid
 
 
-
-def plot_plddt_landscape(plddt_stats: dict, model_to_cluster: dict, save_path=None, display_index=None, max_residue_len=None, model_name=None
-):
+def plot_plddt_landscape(plddt_stats: dict, model_to_cluster: dict, save_path=None, display_index=None,
+                         max_residue_len=None, model_name=None, show_title: bool = True,
+                         show_subtitles: bool = True, show_xlabels: bool = True
+                         ):
     """
     Plot pLDDT landscape with:
     - cluster annotation (left)
@@ -428,7 +431,6 @@ def plot_plddt_landscape(plddt_stats: dict, model_to_cluster: dict, save_path=No
                 return model_to_cluster[key]
         return -1
 
-
     if display_index is not None:
         model_ids = sorted(
             plddt_stats.keys(),
@@ -437,11 +439,8 @@ def plot_plddt_landscape(plddt_stats: dict, model_to_cluster: dict, save_path=No
                 display_index.get(extract_seq_id(mid), 0)
             )
         )
-    y_labels = []
-    for mid in model_ids:
-        seq_id = extract_seq_id(mid)
-        y_labels.append(display_index.get(seq_id, 0))
-
+    else:
+        model_ids = list(plddt_stats.keys())
 
     # --- load and reduce pLDDT arrays ---
     plddt_arrays = []
@@ -455,147 +454,81 @@ def plot_plddt_landscape(plddt_stats: dict, model_to_cluster: dict, save_path=No
         else:
             plddt = data[data.files[0]]
 
-        # Reduce to residue-level pLDDT
         if plddt.ndim == 3:
-            plddt = plddt.squeeze()  # (N_res, 37)
-            plddt = plddt.mean(axis=-1)  # → (N_res,)
-
+            plddt = plddt.squeeze().mean(axis=-1)
         elif plddt.ndim == 2:
-            plddt = plddt.mean(axis=-1)  # → (N_res,)
-        plddt = np.squeeze(plddt)
+            plddt = plddt.mean(axis=-1)
 
+        plddt = np.squeeze(plddt)
         plddt_arrays.append(plddt)
         mean_plddt.append(plddt.mean())
 
-    data_max_len = max(len(a) for a in plddt_arrays)
-
-    max_len = data_max_len
-
-    # Build padded matrix
+    max_len = max(len(a) for a in plddt_arrays)
     heatmap = np.full((len(plddt_arrays), max_len), np.nan)
     for i, arr in enumerate(plddt_arrays):
         heatmap[i, :len(arr)] = arr
 
-    # Cluster vector
     cluster_ids = np.array([model_to_cluster.get(normalize_model_id(mid), -1) for mid in model_ids])
+
+    # --- STYLE APPLY ---
+    set_publication_style(size="standard", figsize=(12, 8))
 
     # --- figure layout ---
     fig = plt.figure(figsize=(12, 8))
-    gs = gridspec.GridSpec(
-        nrows=1,
-        ncols=3,
-        width_ratios=[0.3, 4, 0.7],  # mean panel narrower
-        wspace=0.03  # slightly tighter spacing
-    )
+    gs = gridspec.GridSpec(nrows=1, ncols=3, width_ratios=[0.3, 4, 0.7], wspace=0.03)
 
     ax_cluster = fig.add_subplot(gs[0])
     ax_heatmap = fig.add_subplot(gs[1], sharey=ax_cluster)
     ax_mean = fig.add_subplot(gs[2], sharey=ax_cluster)
 
-    # Manually shift the mean plot slightly to the left
     pos = ax_mean.get_position()
-    ax_mean.set_position((
-        pos.x0 + 0.05,  # shift manually mean plot in plot to the right
-        pos.y0,
-        pos.width,
-        pos.height))
+    ax_mean.set_position((pos.x0 + 0.05, pos.y0, pos.width, pos.height))
 
     # --- cluster strip (left) ---
-    cluster_img = cluster_ids[:, None]
     norm = Normalize(vmin=0, vmax=17)
-    im_cluster = ax_cluster.imshow(
-        cluster_img,
-        aspect="auto",
-        cmap="tab20",
-        norm=norm,
-        interpolation="nearest")
+    ax_cluster.imshow(cluster_ids[:, None], aspect="auto", cmap="tab20", norm=norm, interpolation="nearest")
 
     ax_cluster.set_xticks([])
-    ax_cluster.set_ylabel("Structure index")
+    ax_cluster.set_yticks([])  # <--- Y-Ticks komplett entfernt
+    ax_cluster.set_yticklabels([])  # <--- Y-Labels komplett entfernt
 
-    if display_index is not None:
-
-        n_models = len(model_ids)
-        all_positions = np.arange(n_models)
-
-        major_ticks = []
-        minor_ticks = []
-        labels = [""] * n_models
-
-        for i in range(n_models):
-            val = y_labels[i]
-
-            # --- Hauptticks: 10er ---
-            if val % 10 == 0:
-                major_ticks.append(i)
-                labels[i] = str(val)
-
-            # --- Nebenticks: 5er ---
-            elif val % 5 == 0:
-                minor_ticks.append(i)
-
-        # --- set main ticks ---
-        ax_cluster.set_yticks(major_ticks)
-        ax_cluster.set_yticklabels([labels[i] for i in major_ticks])
-
-        # --- set minor ticks ---
-        ax_cluster.set_yticks(minor_ticks, minor=True)
-
-        # --- Tick-Style ---
-        ax_cluster.tick_params(axis="y", which="major", length=6, width=1.2)
-        ax_cluster.tick_params(axis="y", which="minor", length=4, width=2.0)
-
-    ax_cluster.set_title("Cluster")
+    if show_subtitles:
+        ax_cluster.set_title("Cluster")
 
     # --- pLDDT heatmap (center) ---
-    im = ax_heatmap.imshow(
-        heatmap,
-        aspect="auto",
-        cmap="viridis",
-        vmin=0,
-        vmax=100,
-        interpolation="nearest",
-    )
+    im = ax_heatmap.imshow(heatmap, aspect="auto", cmap="viridis", vmin=0, vmax=100, interpolation="nearest")
     ax_heatmap.set_xlim(0, max_len)
-    ax_heatmap.set_xlabel("Residue position")
-    ax_heatmap.set_title("Residue-wise pLDDT")
+
+    if show_xlabels:
+        ax_heatmap.set_xlabel("Residue position")
+
+    if show_subtitles:
+        ax_heatmap.set_title("Residue-wise pLDDT")
 
     # --- mean pLDDT bars (right) ---
-    ax_mean.barh(
-        np.arange(len(mean_plddt)),
-        mean_plddt,
-        color="black",
-        alpha=0.6,
-    )
+    ax_mean.barh(np.arange(len(mean_plddt)), mean_plddt, color="black", alpha=0.6)
     ax_mean.axvline(70, color="red", linestyle="--", linewidth=1)
-    ax_mean.set_xlabel("Mean pLDDT")
     ax_mean.set_xlim(0, 100)
-    ax_mean.set_title("Mean")
 
-    # Clean shared y-axis clutter
+    if show_xlabels:
+        ax_mean.set_xlabel("Mean pLDDT")
+
+    if show_subtitles:
+        ax_mean.set_title("Mean")
+
     plt.setp(ax_heatmap.get_yticklabels(), visible=False)
     plt.setp(ax_mean.get_yticklabels(), visible=False)
 
-    # --- colorbar ---
     cbar = fig.colorbar(im, ax=ax_heatmap, fraction=0.046, pad=0.01)
-    cbar.set_label("pLDDT")
 
-    if model_name is not None:
-        title = (
-            f"{model_name} pLDDT landscape "
-            f"with cluster annotation and per-model mean")
+    if show_title:
+        title = f"{model_name} pLDDT landscape" if model_name else "pLDDT landscape"
+        fig.suptitle(title, y=0.98)
     else:
-        title = (
-            "pLDDT landscape "
-            "with cluster annotation and per-model mean")
-
-    fig.suptitle(
-        title,
-        fontsize=14,
-        y=0.98)
+        fig.suptitle(" ", fontsize=24, y=0.98)
 
     if save_path is not None:
-        plt.savefig(save_path, dpi=300)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"plddt-Plot written to: {save_path}")
     else:
         plt.show()

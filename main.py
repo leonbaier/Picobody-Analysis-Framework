@@ -116,7 +116,7 @@ DEBUG = False
 general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
-structure_prediction_analysis_bool = False # does not work if old pdb files are present
+structure_prediction_analysis_bool = True # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
 wet_lab_analysis_bool = False
@@ -393,10 +393,10 @@ if cysteine_sequence_analysis_bool:
         output_dir=save_dir_variable_data,
         output_prefix="cut_deduplicated_knobs_unique_vs_structure_picobodies")
 
-    plot_gap_distribution(alignment_path, path_plot_gap_distribution_3rd)
-    plot_entropy_distribution(alignment_path, path_plot_entropy_distribution_3rd)
+    plot_gap_distribution(alignment_path, path_plot_gap_distribution_3rd, show_title=show_plot_titles)
+    plot_entropy_distribution(alignment_path, path_plot_entropy_distribution_3rd, show_title=show_plot_titles)
     plot_sequence_logo(alignment_path, path_plot_sequence_logo_no_gaps_3rd, include_gaps=False, plot_title="Logo with Isolated Knobs of Global Unique Sequences")
-    plot_sequence_logo(alignment_path, path_plot_sequence_logo_with_gaps_3rd, include_gaps=True, plot_title="Logo with Isolated Knobs of Global Unique Sequences (with gaps)")
+    plot_sequence_logo(alignment_path, path_plot_sequence_logo_with_gaps_3rd, include_gaps=True, plot_title="Logo with Isolated Knobs of Global Unique Sequences (with gaps)", show_title=show_plot_titles, size="small")
     print(f"Plots for {alignment_path} with the gap distribution, the entropy distribution and the logos (with and without gaps) were saved.\n")
 
     # cysteine clustering with only knobs
@@ -404,8 +404,7 @@ if cysteine_sequence_analysis_bool:
     clusters, _, _, _, _ = cysteine_clustering(aln_path=Path(save_dir_variable_data /"cut_deduplicated_knobs_unique_vs_structure_picobodies.aln"),
                         fig_path= path_dendrogram_wo_knobs,
                         n_ignore = 32,
-                        cluster_range = range(2,10),
-                        debug=DEBUG)
+                        cluster_range = range(2,10),)
     plot_cluster_logos(clusters,  path_cluster_logo_wo_knobs_chemistry, include_gaps = True)
     plot_cluster_logos(clusters,  path_cluster_logo_wo_knobs_highlight_C, include_gaps = True, highlight_aa="C")
 
@@ -420,7 +419,7 @@ if cysteine_sequence_analysis_bool:
         highlight_n=32,
         negative_binder_ids=negative_binder_ids,
         near_knob_similarity_factor=0.5,
-        debug=DEBUG)
+        show_title=show_plot_titles,)
     save_clusters(clusters, save_dir_variable_data / "clusters.pkl")
     export_clusters_to_txt(clusters, save_dir_variable_data / "clusters_full_table.txt", truncate_seq=False)
 
@@ -432,10 +431,12 @@ if cysteine_sequence_analysis_bool:
         output_tex_path=(save_dir_variable_data / "cluster_summary_cysteine_topology_cut_deduplicated_knobs_unique_vs_structure_picobodies.tex"))
     plot_cysteine_position_heatmap(
         clusters=clusters,
-        save_path=path_cysteine_heatmap)
+        save_path=path_cysteine_heatmap,
+        show_title=show_plot_titles,)
     plot_cysteine_spacing_violin(
         clusters=clusters,
-        save_path=path_cysteine_violin)
+        save_path=path_cysteine_violin,
+        show_title=show_plot_titles,)
 
     identity_results = compute_sequence_identity_matrix(
         alignment_path=save_dir_variable_data / "cut_deduplicated_knobs_unique_vs_structure_picobodies.aln",
@@ -548,7 +549,9 @@ if structure_prediction_analysis_bool:
         subset_without = None
         subset_chain = None
 
-        # Die Variablen aus dem dict direkt entpacken
+        is_top_row = (cfg['label'] == "ESMFold")
+        is_bottom_row = (cfg['label'] == "AlphaFold 3")
+
         for run_dir, ligand_state, path_normal, path_chainA, path_comp, path_comp_mean in cfg["runs"]:
             print(f"------{cfg['label']} ({ligand_state})------")
 
@@ -572,7 +575,10 @@ if structure_prediction_analysis_bool:
                 display_index=display_index,
                 save_path=path_normal,
                 max_residue_len=global_max_len,
-                model_name=f"{cfg['label']} ({ligand_state})")
+                model_name=f"{cfg['label']} ({ligand_state})",
+                show_title=show_plot_titles,
+                show_subtitles=is_top_row,
+                show_xlabels=is_bottom_row, )
 
             # if with mClover, chain-only plddt landscape and then also comparison plddt landscape
             if "with_ligand" in run_dir:
@@ -600,7 +606,10 @@ if structure_prediction_analysis_bool:
                     display_index=display_index,
                     save_path=path_chainA,
                     max_residue_len=None,
-                    model_name=f"{cfg['label']} ({ligand_state}, chain A)")
+                    model_name=f"{cfg['label']} ({ligand_state}, chain A)",
+                    show_title=show_plot_titles,
+                    show_subtitles=is_top_row,
+                    show_xlabels=is_bottom_row, )
 
                 # comparison plddt plots
                 if subset_without is not None and subset_chain is not None:
@@ -1236,7 +1245,7 @@ if figure_creation_bool:
         output_file=(save_dir_thesis_figures / "Figure_5_Structure_Prediction_Overview.png"),
         images={
             "A": path_mean_comp_without_ligand,
-            "B": path_mean_comp_without_ligand,
+            "B": path_mean_comp_with_ligand,
             "C": path_mean_comp_with_ligand_chainA,
             "D": path_esm_tested_vs_comp,
             "E": path_boltz_tested_vs_comp,
@@ -1309,19 +1318,18 @@ if figure_creation_bool:
             "F": path_wet_bli_nanobody,
             "G": path_wet_bli_all_ass,
             "H": path_wet_secmals_uv,
-
         },
         layout=
         """
-        AB
-        CD
-        EF
-        GH
+        ABCD
+        EEFF
+        GGGG
+        HHHH
         """,
-        figure_width_px=4500,  # Breiter, da es 4 Spalten sind
+        figure_width_px=4500,
         panel_label_size=70,
         row_spacing=30,
-        col_spacing=30,)
+        col_spacing=30, )
 
 
 

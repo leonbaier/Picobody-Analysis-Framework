@@ -19,6 +19,8 @@ from scipy.spatial.distance import squareform
 from typing import Dict, Optional
 
 from wet_lab_analysis import export_dataframe_to_latex
+from io_utils import set_publication_style
+
 
 
 
@@ -426,8 +428,8 @@ def evaluate_dedup_thresholds(input_fasta: Path | str,  diff_range: range,  csv_
 def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
                         cluster_range: range = range(2, 10), highlight_mode: str = "none", highlight_n: int = 0,
                         negative_binder_ids: Optional[Dict[str, Dict]] = None, near_knob_similarity_factor: float = 0.4,
-                        debug: bool = False
-) -> tuple[dict[int, dict], np.ndarray, list[str], dict[str, list[str]], set[str]]:
+                        size: bool = False, show_title: bool = True
+                        ) -> tuple[dict[int, dict], np.ndarray, list[str], dict[str, list[str]], set[str]]:
     """
     Perform hierarchical clustering of sequences based on cysteine (C) patterns.
     Method:
@@ -444,8 +446,6 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
     Path
        Path to the dendrogram figure, Cluster data structure, Clustering labels, and Sequence IDs.
     """
-
-    # --- load alignment & select sequences ---
     alignment = AlignIO.read(aln_path, "clustal")
     if len(alignment) <= n_ignore:
         raise ValueError("Alignment contains fewer sequences than n_ignore.")
@@ -453,148 +453,65 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
     target_records = alignment[n_ignore:]
     ids = [rec.id for rec in target_records]
 
-    if debug:
-        print("\n=== Cysteine clustering START ===")
-        print(f"Alignment: {aln_path}")
-        print(f"Total sequences: {len(alignment)}")
-        print(f"Ignoring first n={n_ignore}")
-        print(f"Target sequences used: {len(target_records)}")
-        print(f"Example IDs: {ids[:5]}")
-
-    # --- define knob sequences ---
-    if highlight_mode == "first_n" and highlight_n > 0:
-        highlight_ids = {rec.id for rec in alignment[:highlight_n]}
-    else:
-        highlight_ids = set()
+    highlight_ids = {rec.id for rec in
+                     alignment[:highlight_n]} if highlight_mode == "first_n" and highlight_n > 0 else set()
     knob_ids = set(highlight_ids)
 
-    # --- prepare negative binder IDs ---
-    if negative_binder_ids is not None:
-        negative_binder_id_set = set(negative_binder_ids.keys())
-        missing_negative_ids = negative_binder_id_set - set(ids)
-        if missing_negative_ids:
-            print(f"Negative binder IDs not found in dendrogram: {', '.join(sorted(missing_negative_ids))}")
-        if debug:
-            print(f"Negative binders in data: {len(negative_binder_id_set)}")
-    else:
-        negative_binder_id_set = set()
+    negative_binder_id_set = set(negative_binder_ids.keys()) if negative_binder_ids is not None else set()
 
-    # --- encode cysteine pattern (binary matrix) ---
-    patterns = np.array([
-        [1 if aa == "C" else 0 for aa in str(rec.seq)]
-        for rec in target_records])
-    if debug:
-        print("\nCysteine pattern matrix:")
-        print(f"Shape: {patterns.shape}")
-    if debug and len(patterns) > 0:
-        print(f"Example sequence: {target_records[0].id}")
-        print(f"Pattern: {patterns[0]}")
+    patterns = np.array([[1 if aa == "C" else 0 for aa in str(rec.seq)] for rec in target_records])
 
-    # --- find optimal number of clusters ---
     best_score = -1.0
     best_labels = None
     best_k = None
 
     for k in cluster_range:
-        model = AgglomerativeClustering(
-            n_clusters=k,
-            linkage="average",
-            metric="manhattan",
-        )
+        model = AgglomerativeClustering(n_clusters=k, linkage="average", metric="manhattan")
         labels = model.fit_predict(patterns)
         score = silhouette_score(patterns, labels, metric="manhattan")
-
-        if debug:
-            print(f"[CLUSTER TEST] k={k}, silhouette={score:.3f}")
-
         if score > best_score:
             best_score = score
             best_k = k
             best_labels = labels
 
-    # --- build cluster data structure ---
     clusters = {}
-    for idx, (seq_id, label, record) in enumerate(
-        zip(ids, best_labels, target_records)):
-        clusters.setdefault(label, {
-            "indices": [],
-            "ids": [],
-            "sequences": [],})
+    for idx, (seq_id, label, record) in enumerate(zip(ids, best_labels, target_records)):
+        clusters.setdefault(label, {"indices": [], "ids": [], "sequences": []})
         clusters[label]["indices"].append(idx)
         clusters[label]["ids"].append(seq_id)
         clusters[label]["sequences"].append(str(record.seq))
 
-    # --- assign global display ids ---
     global_display_counter = 1
-
     for cluster_id in sorted(clusters):
-
-        seq_ids = [str(s) for s in clusters[cluster_id]["ids"]]
-
-        def extract_number(s):
-            match = re.search(r"(\d+)", s)
-            return int(match.group(1)) if match else float("inf")
-
-        seq_ids = sorted(seq_ids, key=extract_number)
-
+        seq_ids = sorted([str(s) for s in clusters[cluster_id]["ids"]],
+                         key=lambda s: int(re.search(r"(\d+)", s).group(1)) if re.search(r"(\d+)", s) else float("inf"))
         display_ids = {}
         for seq_id in seq_ids:
             display_ids[seq_id] = global_display_counter
             global_display_counter += 1
         clusters[cluster_id]["display_ids"] = display_ids
 
-    if debug:
-        print("\nCluster summary:")
-        for label, data in clusters.items():
-            print(
-                f"Cluster {label}: "
-                f"{len(data['ids'])} sequences")
-
-    # --- hierarchical linkage (SciPy) ---
     Z = linkage(patterns, method="average", metric="cityblock")
 
-    labels_scipy = fcluster(Z, t=best_k, criterion="maxclust")
-    ari = adjusted_rand_score(labels_scipy, best_labels)
-    print(
-        f"Best cluster number: {best_k} "
-        f"(silhouette score: {best_score:.3f}), "
-        f"Similarity sklearn vs. SciPy clustering (ARI): {ari:.3f}")
-
-    # --- dendrogram plot ---
+    # ==========================================================
+    # DENDROGRAM PLOT
+    # ==========================================================
+    set_publication_style(size="small", figsize=(20, 10))
     plt.figure(figsize=(20, 10))
     plt.subplots_adjust(bottom=0.1)
 
-    id_to_cluster = dict(zip(ids, best_labels))
-
-    # --- cluster colors ---
-    cluster_colors = [
-        "tab:blue", "tab:orange", "tab:green", "tab:red",
-        "tab:purple", "tab:brown", "tab:pink", "tab:gray", "tab:olive",
-
-        # additional distinct colors
-        "cyan", "magenta", "gold", "lime", "teal", "navy",
-        "maroon", "darkorange", "darkgreen", "indigo", "crimson",]
-
+    cluster_colors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink",
+                      "tab:gray", "tab:olive", "cyan", "magenta", "gold", "lime", "teal", "navy", "maroon",
+                      "darkorange", "darkgreen", "indigo", "crimson"]
     unique_clusters = sorted(set(best_labels))
-    cluster_to_color = {
-        cluster: cluster_colors[i]
-        for i, cluster in enumerate(unique_clusters)}
+    cluster_to_color = {cluster: cluster_colors[i] for i, cluster in enumerate(unique_clusters)}
 
-    distance_threshold = Z[-best_k + 1, 2]
-    ddata = dendrogram(
-        Z,
-        labels=ids,
-        leaf_rotation=90,
-        leaf_font_size=4,
-        color_threshold=0,
-        above_threshold_color="black")
+    # leaf_font_size wurde entfernt -> Skaliert nun automatisch mit dem Style!
+    ddata = dendrogram(Z, labels=ids, leaf_rotation=90, color_threshold=0, above_threshold_color="black")
     ax = plt.gca()
 
-    # --- BACKGROUND SHADING FOR CLUSTERS ---
     leaf_order = ddata["leaves"]
-    # get cluster per leaf in plot order
     ordered_clusters = [best_labels[i] for i in leaf_order]
-    # find continuous cluster blocks
     blocks = []
     start = 0
     for i in range(1, len(ordered_clusters)):
@@ -603,38 +520,21 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
             start = i
     blocks.append((start, len(ordered_clusters) - 1, ordered_clusters[-1]))
 
-    # plot shaded regions
     for start, end, cluster in blocks:
-        x_start = start * 10
-        x_end = (end + 1) * 10
+        ax.axvspan(start * 10, (end + 1) * 10, color=cluster_to_color[cluster], alpha=0.08, zorder=0)
 
-        ax.axvspan(
-            x_start,
-            x_end,
-            color=cluster_to_color[cluster],
-            alpha=0.08,  # transparency
-            zorder=0)  # keep behind dendrogram
+    if show_title:
+        plt.title("Hierarchical clustering based on cysteine patterns", fontweight="bold")
 
-    plt.title(
-        "Hierarchical clustering based on cysteine patterns",
-        fontsize=22,
-        fontweight="bold")
-    plt.xlabel("Sequences", fontsize=16)
-    plt.ylabel("Manhattan distance", fontsize=16)
+    plt.xlabel("Sequences", fontsize=20)
+    plt.ylabel("Manhattan distance", fontsize=20)
 
-    # --- compute neighbors of knobs ---
+    distance_threshold = Z[-best_k + 1, 2]
+    neighbor_distance_threshold = distance_threshold * near_knob_similarity_factor
     id_to_index = {seq_id: i for i, seq_id in enumerate(ids)}
-    knob_indices = [
-        id_to_index[sid] for sid in knob_ids if sid in id_to_index]
-
+    knob_indices = [id_to_index[sid] for sid in knob_ids if sid in id_to_index]
     _, coph_condensed = cophenet(Z, pdist(patterns))
     coph_dists = squareform(coph_condensed)
-    neighbor_distance_threshold = distance_threshold * near_knob_similarity_factor
-
-    if debug:
-        print("\nDistance threshold:")
-        print(f"Raw threshold: {distance_threshold:.3f}")
-        print(f"Adjusted (factor={near_knob_similarity_factor}): {neighbor_distance_threshold:.3f}")
 
     near_knob_ids = set()
     for i in knob_indices:
@@ -643,187 +543,91 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
                 near_knob_ids.add(seq_id)
     near_knob_ids -= knob_ids
 
-    if debug:
-        print(f"\nNear-knobs identified: {len(near_knob_ids)}")
-        print(f"Example: {list(near_knob_ids)[:5]}")
-
     near_knob_to_knobs = {}
     for i in knob_indices:
         knob_id = ids[i]
-
         for j, seq_id in enumerate(ids):
-            if i != j and coph_dists[i, j] <= neighbor_distance_threshold:
-
-                if seq_id in knob_ids:
-                    continue # no knob to knob mapping
+            if i != j and coph_dists[i, j] <= neighbor_distance_threshold and seq_id not in knob_ids:
                 near_knob_to_knobs.setdefault(seq_id, []).append(knob_id)
-    near_knob_to_knobs = {
-        k: v for k, v in near_knob_to_knobs.items()
-        if k not in knob_ids}
 
-    if debug:
-        print("\nNear-knob relationships:")
-        for seq, knobs in near_knob_to_knobs.items():
-            print(f"{seq} -> {', '.join(knobs)}")
-
-    # --- color dendrogram ---
     for label, leaf_idx in zip(ax.get_xmajorticklabels(), ddata["leaves"]):
         seq_id = ids[leaf_idx]
-
-        # knobs
         if seq_id in knob_ids:
             label.set_fontweight("bold")
-            label.set_bbox(
-                dict(facecolor="lightgray", edgecolor="none", boxstyle="round,pad=0.15"))
-        # negative
+            label.set_bbox(dict(facecolor="lightgray", edgecolor="none", boxstyle="round,pad=0.15"))
         elif seq_id in negative_binder_id_set:
-            label.set_bbox(
-                dict(facecolor="lightcoral", edgecolor="none", boxstyle="round,pad=0.15"))
+            label.set_bbox(dict(facecolor="lightcoral", edgecolor="none", boxstyle="round,pad=0.15"))
         elif seq_id in near_knob_ids:
-            label.set_bbox(
-                dict(facecolor="orange", edgecolor="none", boxstyle="round,pad=0.15"))
+            label.set_bbox(dict(facecolor="orange", edgecolor="none", boxstyle="round,pad=0.15"))
 
     ax.set_ylim(0, Z[:, 2].max() * 1.05)
 
-    # --- legend ---
     legend_elements = [
-        Patch(facecolor=cluster_to_color[c], label=f"Cluster {c + 1} (n={len(clusters[c]['sequences'])})")
-        for c in sorted(unique_clusters)]
-
-    highlight_legend = [
-        Patch(facecolor="lightgray", edgecolor="black", label="Knobs"),
-        Patch(facecolor="orange", edgecolor="black", label="Near knobs")]
+        Patch(facecolor=cluster_to_color[c], label=f"Cluster {c + 1} (n={len(clusters[c]['sequences'])})") for c in
+        sorted(unique_clusters)]
+    highlight_legend = [Patch(facecolor="lightgray", edgecolor="black", label="Knobs"),
+                        Patch(facecolor="orange", edgecolor="black", label="Near knobs")]
     if negative_binder_id_set:
-        highlight_legend = [
-            Patch(facecolor="lightgray", edgecolor="black", label="Knobs"),
-            Patch(facecolor="orange", edgecolor="black", label="Near knobs"),
-            Patch(facecolor="lightcoral", edgecolor="black", label="Negative binders")]
-    ax.legend(
-        handles=legend_elements + highlight_legend,
-        title="Legend",
-        loc="upper right",
-        fontsize=8)
+        highlight_legend.append(Patch(facecolor="lightcoral", edgecolor="black", label="Negative binders"))
 
-    # --- save figure ---
+    ax.legend(handles=legend_elements + highlight_legend, title="Legend", loc="upper right")
+
     plt.savefig(fig_path, dpi=300)
     plt.close()
-    print(f"Dendrogram written to: {fig_path}")
 
     # ==========================================================
     # SECOND DENDROGRAM WITH GLOBAL DISPLAY IDS
     # ==========================================================
+    seq_to_display_id = {k: v for cluster_data in clusters.values() for k, v in cluster_data["display_ids"].items()}
+    display_labels = [f"seq {seq_to_display_id[seq_id]}" if seq_id in seq_to_display_id else f"knob {seq_id}" for seq_id
+                      in ids]
 
-    # --- build seq_id -> display_id lookup ---
-    seq_to_display_id = {}
-
-    for cluster_data in clusters.values():
-        seq_to_display_id.update(cluster_data["display_ids"])
-
-    # keep non-seq labels unchanged (e.g. knobs)
-    display_labels = []
-
-    for seq_id in ids:
-        if seq_id in seq_to_display_id:
-            display_labels.append(
-                f"seq {seq_to_display_id[seq_id]}")
-        else:
-            display_labels.append(
-                f"knob {seq_id}")
-
-    # --- second dendrogram ---
+    set_publication_style(size="large", figsize=(20, 10))
     plt.figure(figsize=(20, 10))
     plt.subplots_adjust(bottom=0.1)
 
-    ddata_display = dendrogram(
-        Z,
-        labels=display_labels,
-        leaf_rotation=90,
-        leaf_font_size=4,
-        color_threshold=0,
-        above_threshold_color="black",)
+    ddata_display = dendrogram(Z, labels=display_labels, leaf_rotation=90, color_threshold=0,
+                               above_threshold_color="black")
     ax = plt.gca()
 
-    # --- background cluster shading ---
     leaf_order = ddata_display["leaves"]
     ordered_clusters = [best_labels[i] for i in leaf_order]
-
     blocks = []
     start = 0
-
     for i in range(1, len(ordered_clusters)):
         if ordered_clusters[i] != ordered_clusters[i - 1]:
             blocks.append((start, i - 1, ordered_clusters[i - 1]))
             start = i
-
     blocks.append((start, len(ordered_clusters) - 1, ordered_clusters[-1]))
 
     for start, end, cluster in blocks:
-        x_start = start * 10
-        x_end = (end + 1) * 10
+        ax.axvspan(start * 10, (end + 1) * 10, color=cluster_to_color[cluster], alpha=0.08, zorder=0)
 
-        ax.axvspan(
-            x_start,
-            x_end,
-            color=cluster_to_color[cluster],
-            alpha=0.08,
-            zorder=0,)
+    if show_title:
+        plt.title("Hierarchical clustering based on cysteine patterns (display IDs)", fontweight="bold")
 
-    plt.title("Hierarchical clustering based on cysteine patterns (display IDs)", fontsize=22, fontweight="bold",)
+    plt.xlabel("Display IDs")
+    plt.ylabel("Manhattan distance")
 
-    plt.xlabel("Display IDs", fontsize=16)
-    plt.ylabel("Manhattan distance", fontsize=16)
-
-    # --- identical label coloring ---
-    for label, leaf_idx in zip(ax.get_xmajorticklabels(), ddata_display["leaves"],):
+    for label, leaf_idx in zip(ax.get_xmajorticklabels(), ddata_display["leaves"]):
         seq_id = ids[leaf_idx]
-
         if seq_id in knob_ids:
             label.set_fontweight("bold")
-            label.set_bbox(
-                dict(
-                    facecolor="lightgray",
-                    edgecolor="none",
-                    boxstyle="round,pad=0.15",
-                )
-            )
-
+            label.set_bbox(dict(facecolor="lightgray", edgecolor="none", boxstyle="round,pad=0.15"))
         elif seq_id in negative_binder_id_set:
-            label.set_bbox(
-                dict(
-                    facecolor="lightcoral",
-                    edgecolor="none",
-                    boxstyle="round,pad=0.15",
-                )
-            )
-
+            label.set_bbox(dict(facecolor="lightcoral", edgecolor="none", boxstyle="round,pad=0.15"))
         elif seq_id in near_knob_ids:
-            label.set_bbox(
-                dict(
-                    facecolor="orange",
-                    edgecolor="none",
-                    boxstyle="round,pad=0.15",
-                )
-            )
+            label.set_bbox(dict(facecolor="orange", edgecolor="none", boxstyle="round,pad=0.15"))
 
     ax.set_ylim(0, Z[:, 2].max() * 1.05)
-
-    ax.legend(
-        handles=legend_elements + highlight_legend,
-        title="Legend",
-        loc="upper right",
-        fontsize=8,)
+    ax.legend(handles=legend_elements + highlight_legend, title="Legend", loc="upper right")
 
     fig_path_display = fig_path.parent / f"{fig_path.stem}_display_ids.png"
     plt.savefig(fig_path_display, dpi=300)
-
     plt.close()
 
-    print(f"Dendrogram with display IDs written to: {fig_path_display}")
-
-    if debug:
-        print("\n=== Cysteine clustering END ===")
-
     return clusters, Z, ids, near_knob_to_knobs, knob_ids
+
 
 
 def plot_cluster_logos(clusters: dict, out_path: Path, filename: str | None = None, include_gaps: bool = False, highlight_aa: str | None = None
@@ -963,114 +767,72 @@ def cluster_summary_to_latex( clusters: dict, output_tex_path
     print(f"Cluster summary table written to: {output_tex_path}")
 
 
-def plot_cysteine_position_heatmap(clusters: dict, save_path, max_positions: int | None = None
-) -> None:
-    """
-    Plot a heatmap showing cysteine frequency per alignment position per cluster.
-    """
-    # determine max sequence length
+def plot_cysteine_position_heatmap(clusters: dict, save_path, max_positions: int | None = None,
+                                   show_title: bool = True) -> None:
     if max_positions is None:
-        max_positions = max(
-            max(len(seq) for seq in data["sequences"])
-            for data in clusters.values()
-        )
+        max_positions = max(max(len(seq) for seq in data["sequences"]) for data in clusters.values())
+
     heatmap = []
     for cluster_id, data in sorted(clusters.items()):
         seqs = data["sequences"]
         n = len(seqs)
-
         freq = np.zeros(max_positions)
-
         for seq in seqs:
             for i, aa in enumerate(seq):
                 if aa == "C":
                     freq[i] += 1
-
-        freq = freq / n  # normalize
-        heatmap.append(freq)
+        heatmap.append(freq / n)
     heatmap = np.array(heatmap)
 
-    # create labels with sequence counts
-    cluster_labels = [
-        f"Cluster {i + 1} (n={len(data['sequences'])})"
-        for i, (_, data) in enumerate(sorted(clusters.items()))]
-    n_clusters = len(clusters)
+    cluster_labels = [f"Cluster {i + 1} (n={len(data['sequences'])})" for i, (_, data) in
+                      enumerate(sorted(clusters.items()))]
 
-    # --- adaptive fontsize ---
-    base_size = 12
-    ylabel_size = max(10, 16 - n_clusters * 0.2)  # skaliert mit Clusterzahl
-    title_size = 18
-    tick_size = max(9, 13 - n_clusters * 0.15)
+    fig_height = 4 + len(clusters) * 0.5
 
-    plt.figure(figsize=(14, 4 + n_clusters * 0.5))  # mehr Höhe!
+    set_publication_style(size="standard", figsize=(14, fig_height))
+    plt.figure(figsize=(14, fig_height))
+
     plt.imshow(heatmap, aspect="auto", cmap="viridis")
 
-    # --- colorbar ---
     cbar = plt.colorbar()
-    cbar.set_label("Cysteine frequency", fontsize=15)
-    cbar.ax.tick_params(labelsize=11)
+    cbar.set_label("Cysteine frequency")
 
-    # --- axes ---
     ax = plt.gca()
-    plt.yticks(
-        range(len(cluster_labels)),
-        cluster_labels,
-        fontsize=ylabel_size)
-    plt.xticks(fontsize=tick_size)
+    plt.yticks(range(len(cluster_labels)), cluster_labels)
 
-    plt.xlabel("Alignment position", fontsize=16)
-    plt.ylabel("Cluster", fontsize=16)
-    plt.title(
-        "Cysteine position frequency across clusters",
-        fontsize=title_size)
+    plt.xlabel("Alignment position")
 
-    # highlight y label
+    if show_title:
+        plt.title("Cysteine position frequency across clusters")
+
     for i, (cluster_id, data) in enumerate(sorted(clusters.items())):
         n_seq = len(data["sequences"])
         if n_seq >= 10:
             label = ax.get_yticklabels()[i]
             label.set_fontweight("bold")
-            label.set_bbox(dict(
-                facecolor="darkorange",
-                edgecolor="none",
-                boxstyle="round,pad=0.2"))
+            label.set_bbox(dict(facecolor="darkorange", edgecolor="none", boxstyle="round,pad=0.2"))
 
-    # Highlight major clusters with side markers (no data overlap)
     for i, (cluster_id, data) in enumerate(sorted(clusters.items())):
         n_seq = len(data["sequences"])
         if n_seq >= 10:
-            ax.plot(
-                -0.5, i,
-                marker=">",
-                markersize=12,
-                color="darkorange",
-                clip_on=False)
+            ax.plot(-0.5, i, marker=">", markersize=12, color="darkorange", clip_on=False)
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=300)
     plt.close()
-    print(f"Saved cysteine position heatmap to {save_path}")
 
 
-def plot_cysteine_spacing_violin(clusters: dict, save_path) -> None:
-    """
-    Plot violin plots of C–C spacer lengths per cluster.
-    """
-
+def plot_cysteine_spacing_violin(clusters: dict, save_path, show_title: bool = True) -> None:
     cluster_list = list(sorted(clusters.items()))
-
     spacings = []
     sizes = []
 
     for cluster_id, data in cluster_list:
         cluster_spacings = []
-
         for seq in data["sequences"]:
             c_positions = [i for i, aa in enumerate(seq) if aa == "C"]
             for i in range(len(c_positions) - 1):
-                cluster_spacings.append(
-                    c_positions[i + 1] - c_positions[i] - 1
-                )
+                cluster_spacings.append(c_positions[i + 1] - c_positions[i] - 1)
 
         if not cluster_spacings:
             cluster_spacings = [0]
@@ -1078,19 +840,19 @@ def plot_cysteine_spacing_violin(clusters: dict, save_path) -> None:
         spacings.append(cluster_spacings)
         sizes.append(len(data["sequences"]))
 
+    set_publication_style(size="standard", figsize=(10, 5))
     plt.figure(figsize=(10, 5))
+
     parts = plt.violinplot(spacings, showmeans=True, showmedians=True)
 
-    labels = [
-        f"Cluster {i + 1} (n={sizes[i]})"
-        for i in range(len(sizes))
-    ]
+    labels = [f"Cluster {i + 1} (n={sizes[i]})" for i in range(len(sizes))]
 
-    plt.xticks(range(1, len(labels) + 1), labels, rotation=90, fontsize=11)
-    plt.ylabel("C–C spacing (amino acids)", fontsize=14)
-    plt.title("Distribution of inter-cysteine spacings per cluster", fontsize=16)
+    plt.xticks(range(1, len(labels) + 1), labels, rotation=90)
+    plt.ylabel("C–C spacing (amino acids)")
 
-    # Highlighting
+    if show_title:
+        plt.title("Distribution of inter-cysteine spacings per cluster")
+
     for i, size in enumerate(sizes):
         if size >= 10:
             parts['bodies'][i].set_facecolor("orange")
@@ -1101,8 +863,6 @@ def plot_cysteine_spacing_violin(clusters: dict, save_path) -> None:
 
     plt.savefig(save_path, dpi=300, bbox_inches="tight")
     plt.close()
-
-    print(f"Saved cysteine spacer violin plot to {save_path}")
 
 
 
