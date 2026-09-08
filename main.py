@@ -119,8 +119,8 @@ structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
-wet_lab_analysis_bool = True
-figure_creation_bool = False
+wet_lab_analysis_bool = False
+figure_creation_bool = True
 
 show_plot_titles = False
 
@@ -214,9 +214,9 @@ path_plddt_landscape_esm_ligand_chainA = save_dir_dry_lab_plots / "plddt_landsca
 path_esm_tested_vs_comp = save_dir_dry_lab_plots / "esm_tested_vs_comparison.png"
 path_esm_tested_vs_comp_mean = save_dir_dry_lab_plots / "esm_tested_vs_comparison_mean.png"
 
-path_plddt_landscape_boltz_simple = save_dir_dry_lab_plots / "plddt_landscape_simple_all.png"
-path_plddt_landscape_boltz_ligand = save_dir_dry_lab_plots / "plddt_landscape_with_ligand_all.png"
-path_plddt_landscape_boltz_ligand_chainA = save_dir_dry_lab_plots / "plddt_landscape_with_ligand_all_chainA.png"
+path_plddt_landscape_boltz_simple = save_dir_dry_lab_plots / "plddt_landscape_boltz_simple_all.png"
+path_plddt_landscape_boltz_ligand = save_dir_dry_lab_plots / "plddt_landscape_boltz_with_ligand_all.png"
+path_plddt_landscape_boltz_ligand_chainA = save_dir_dry_lab_plots / "plddt_landscape_boltz_with_ligand_all_chainA.png"
 path_boltz_tested_vs_comp = save_dir_dry_lab_plots / "boltz_tested_vs_comparison.png"
 path_boltz_tested_vs_comp_mean = save_dir_dry_lab_plots / "boltz_tested_vs_comparison_mean.png"
 
@@ -230,7 +230,7 @@ path_mean_comp_without_ligand = save_dir_dry_lab_plots / "plddt_mean_comparison_
 path_mean_comp_with_ligand = save_dir_dry_lab_plots / "plddt_mean_comparison_with_ligand.png"
 path_mean_comp_with_ligand_chainA = save_dir_dry_lab_plots / "plddt_mean_comparison_with_ligand_chainA.png"
 
-# MD analysis overview
+# MD analysis
 path_md_overview_rmsd_apo = save_dir_dry_lab_plots / "MD_overview_RMSD_apo.png"
 path_md_overview_rmsf_apo = save_dir_dry_lab_plots / "MD_overview_RMSF_apo.png"
 
@@ -238,6 +238,38 @@ path_md_overview_rmsd_holo = save_dir_dry_lab_plots / "MD_overview_RMSD_holo.png
 path_md_overview_rmsf_holo = save_dir_dry_lab_plots / "MD_overview_RMSF_holo.png"
 path_md_overview_binder_dist = save_dir_dry_lab_plots / "MD_overview_binder_target_distance.png"
 path_md_overview_min_dist = save_dir_dry_lab_plots / "MD_overview_min_contact_distance.png"
+
+# wet lab analysis
+path_wet_affinity_all = save_dir_wet_lab_plots / "affinity_chromatography_all.png"
+path_wet_sec_all = save_dir_wet_lab_plots / "sec_chromatography_all.png"
+path_wet_sds_page = Path(save_dir_wetlab / "SDS_gels/mCloverV1-V12-V13-V14_with-Flow-Through_4_29082026_edited3.png")
+
+path_wet_bli_v1 = save_dir_wet_lab_plots / "BLI_V1.png"
+path_wet_bli_v12 = save_dir_wet_lab_plots / "BLI_V12.png"
+path_wet_bli_v13 = save_dir_wet_lab_plots / "BLI_V13_4.png" # 0.2 mg/ml run
+path_wet_bli_v14 = save_dir_wet_lab_plots / "BLI_mCloverV14_2.png" # Repeated run
+path_wet_bli_noknob = save_dir_wet_lab_plots / "BLI_NoKnob.png"
+path_wet_bli_nanobody = save_dir_wet_lab_plots / "BLI_aGNb53nt_100nM.png"
+path_wet_bli_all_ass = save_dir_wet_lab_plots / "BLI_all_ass.png"
+
+path_wet_supr_pbs_bcm = save_dir_wet_lab_plots / "PBS_20260730_mCloverV1-12-13_Export_30_07_2026_BCM.png"
+path_wet_supr_pbs_dbcm = save_dir_wet_lab_plots / "PBS_20260730_mCloverV1-12-13_Export_30_07_2026_dBCM.png"
+path_wet_supr_v1_bcm = save_dir_wet_lab_plots / "V1_20260730_mCloverV1-12-13_Export_30_07_2026_BCM.png"
+path_wet_supr_v1_dbcm = save_dir_wet_lab_plots / "V1_20260730_mCloverV1-12-13_Export_30_07_2026_dBCM.png"
+path_wet_supr_v12_bcm = save_dir_wet_lab_plots / "V12_20260730_mCloverV1-12-13_Export_30_07_2026_BCM.png"
+path_wet_supr_v12_dbcm = save_dir_wet_lab_plots / "V12_20260730_mCloverV1-12-13_Export_30_07_2026_dBCM.png"
+path_wet_supr_v13_bcm = save_dir_wet_lab_plots / "V13_20260730_mCloverV1-12-13_Export_30_07_2026_BCM.png"
+path_wet_supr_v13_dbcm = save_dir_wet_lab_plots / "V13_20260730_mCloverV1-12-13_Export_30_07_2026_dBCM.png"
+path_wet_supr_v14_bcm = save_dir_wet_lab_plots / "V14 - 0.652_20260813_mCloverV14_Export_13_08_2026_BCM.png"
+path_wet_supr_v14_dbcm = save_dir_wet_lab_plots / "V14 - 0.652_20260813_mCloverV14_Export_13_08_2026_dBCM.png"
+
+path_wet_secmals_uv = save_dir_wet_lab_plots / "SEC_MALS_UV.png"
+
+path_wet_ms_v1 = Path(save_dir_wetlab / "ESI_MS/5629_HS-EEI_20260813_mCloverV1_zoom.pdf")
+path_wet_ms_v12 = Path(save_dir_wetlab / "ESI_MS/5630_HS-EEI_20260813_mCloverV12_zoom.pdf")
+path_wet_ms_v13 = Path(save_dir_wetlab / "ESI_MS/5631_HS-EEI_20260813_mCloverV13_zoom.pdf")
+path_wet_ms_v14 = Path(save_dir_wetlab / "ESI_MS/5632_HS-EEI_20260813_mCloverV14_zoom.pdf")
+
 
 # ---------------Initializing--------------------------
 save_dir_variable_data.mkdir(exist_ok=True)
@@ -906,7 +938,7 @@ if wet_lab_analysis_bool:
                   "20260722_AffinityCaptureSelectBovLC_mCloverV13_50ml", "20260805_AffinityCaptureSelectBovLC_mCloverV14-2_50ml"],
         run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14",],
         signals=["UV", "Conc B"],
-        save_path=save_dir_wet_lab_plots / "affinity_chromatography_all.png",
+        save_path=path_wet_affinity_all,
         title="Affinity Chromatography mCloverV1/12/13/14 with Elution Start",
         conc_b_easy_mode= True)
 
@@ -927,7 +959,7 @@ if wet_lab_analysis_bool:
                   "20260724_Superose_6_Increase_mCloverV13", "20260806_Superose_6_Increase_mCloverV14_2",],
         run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14",],
         signals=["UV"],
-        save_path=save_dir_wet_lab_plots / "sec_chromatography_all.png",
+        save_path=path_wet_sec_all,
         title="Size Exclusion Chromatography mCloverV1/12/13/14")
 
     report_sec_fractions(
@@ -1036,8 +1068,7 @@ if wet_lab_analysis_bool:
             "mCloverV14 (0.2 mg/ml)",
             "NoKnob-Fab (0.2 mg/ml)",
             f"aGNb53nt ({conc_mg_ml_aGNb53nt:.3f} mg/ml)",],
-        save_path=save_dir_wet_lab_plots / "BLI_all_ass.png",
-    )
+        save_path=path_wet_bli_all_ass,)
 
 
 
@@ -1115,18 +1146,18 @@ if wet_lab_analysis_bool:
         csv_folder=save_dir_variable_data,
         latex_folder=save_dir_tables_gen,)
 
-
-
 if figure_creation_bool:
     print("\n--------------------Figure Creation--------------------")
+
+    print("Creating Figure 1 (General Sequence Analysis)...")
     create_composite_figure(
-        output_file=(save_dir_thesis_figures / "Figure_1.png"),
+        output_file=(save_dir_thesis_figures / "Figure_1_General_Sequences.png"),
         images={
             "A": path_plot_length_distribution_1st,
             "B": path_plot_occurrence_distribution_1st,
             "C": path_plot_gap_distribution_1st,
             "D": path_plot_entropy_distribution_1st,
-            "E": path_plot_sequence_logo_with_gaps_1st,},
+            "E": path_plot_sequence_logo_with_gaps_1st, },
         layout=
         """
         AB
@@ -1136,9 +1167,161 @@ if figure_creation_bool:
         figure_width_px=3000,
         panel_label_size=50,
         row_spacing=0,
-        col_spacing=25,)
+        col_spacing=25, )
 
+    print("Creating Figure 2 (Cysteine Alignnment)")
+    create_composite_figure(
+        output_file=(save_dir_thesis_figures / "Figure_2_Cysteine_Aln.png"),
+        images={
+            "A": path_plot_gap_distribution_3rd,
+            "B": path_plot_entropy_distribution_3rd,
+            "C": path_plot_sequence_logo_with_gaps_3rd,
+        },
+        layout=
+        """
+        AB
+        CC
+        """,
+        figure_width_px=3500,
+        panel_label_size=60,
+        row_spacing=20,
+        col_spacing=25, )
 
+    print("Creating Figure 3 (Cysteine Clustering)...")
+    create_composite_figure(
+        output_file=(save_dir_thesis_figures / "Figure_3_Cysteine_Clustering.png"),
+        images={
+            "A": path_dendrogram_with_knobs,
+            "B": path_cysteine_violin,
+            "C": path_cysteine_heatmap,
+        },
+        layout=
+        """
+        AA
+        AA
+        BC
+        """,
+        figure_width_px=3500,
+        panel_label_size=60,
+        row_spacing=20,
+        col_spacing=25, )
+
+    print("Creating Figure 4 (Structure Prediction All)...")
+    create_composite_figure(
+        output_file=(save_dir_thesis_figures / "Figure_4_Structure_Prediction_All.png"),
+        images={
+            "A": path_plddt_landscape_esm_simple,
+            "B": path_plddt_landscape_esm_ligand,
+            "C": path_plddt_landscape_esm_ligand_chainA,
+            "D": path_plddt_landscape_boltz_simple,
+            "E": path_plddt_landscape_boltz_ligand,
+            "F": path_plddt_landscape_boltz_ligand_chainA,
+            "G": path_plddt_landscape_af3_simple,
+            "H": path_plddt_landscape_af3_ligand,
+            "I": path_plddt_landscape_af3_ligand_chainA,
+        },
+        layout=
+        """
+        ABC
+        DEF
+        GHI
+        """,
+        figure_width_px=3500,
+        panel_label_size=60,
+        row_spacing=30,
+        col_spacing=30, )
+
+    print("Creating Figure 5 (Structure Prediction Overview)...")
+    create_composite_figure(
+        output_file=(save_dir_thesis_figures / "Figure_5_Structure_Prediction_Overview.png"),
+        images={
+            "A": path_mean_comp_without_ligand,
+            "B": path_mean_comp_without_ligand,
+            "C": path_mean_comp_with_ligand_chainA,
+            "D": path_esm_tested_vs_comp,
+            "E": path_boltz_tested_vs_comp,
+            "F": path_af3_tested_vs_comp,
+
+        },
+        layout=
+        """
+        ABC
+        DEF
+        """,
+        figure_width_px=3500,
+        panel_label_size=60,
+        row_spacing=30,
+        col_spacing=30, )
+
+    print("Creating Figure 6 (Molecular Dynamics)...")
+    md_images = {}
+    if path_md_overview_rmsd_apo.exists(): md_images["A"] = path_md_overview_rmsd_apo
+    if path_md_overview_rmsf_apo.exists(): md_images["B"] = path_md_overview_rmsf_apo
+    if path_md_overview_rmsd_holo.exists(): md_images["C"] = path_md_overview_rmsd_holo
+    if path_md_overview_rmsf_holo.exists(): md_images["D"] = path_md_overview_rmsf_holo
+    if path_md_overview_binder_dist.exists(): md_images["E"] = path_md_overview_binder_dist
+    if path_md_overview_min_dist.exists(): md_images["F"] = path_md_overview_min_dist
+
+    if len(md_images) == 6:
+        create_composite_figure(
+            output_file=(save_dir_thesis_figures / "Figure_6_Molecular_Dynamics.png"),
+            images=md_images,
+            layout=
+            """
+            AB
+            CD
+            EF
+            """,
+            figure_width_px=3500,
+            panel_label_size=60,
+            row_spacing=30,
+            col_spacing=30, )
+    else:
+        print("Skipping Figure 6: Not all MD overview plots exist yet.")
+
+    print("Creating Figure 7 (Protein Production & QC)...")
+    create_composite_figure(
+        output_file=(save_dir_thesis_figures / "Figure_7_Protein_Production.png"),
+        images={
+            "A": path_wet_affinity_all,
+            "B": path_wet_sec_all,
+            "C": path_wet_sds_page,        },
+        layout=
+        """
+        AB
+        CC
+        CC
+        """,
+        figure_width_px=3500,
+        panel_label_size=60,
+        row_spacing=30,
+        col_spacing=30, )
+
+    print("Creating Figure 8 (Biophysical Characterization)...")
+    create_composite_figure(
+        output_file=(save_dir_thesis_figures / "Figure_8_Biophysics.png"),
+        images={
+            "A": path_wet_supr_v1_dbcm,
+            "B": path_wet_supr_v12_dbcm,
+            "C": path_wet_supr_v13_dbcm,
+            "D": path_wet_supr_v14_dbcm,
+            "E": path_wet_bli_noknob,
+            "F": path_wet_bli_nanobody,
+            "G": path_wet_bli_all_ass,
+            "H": path_wet_secmals_uv,
+
+        },
+        layout=
+        """
+        AB
+        CD
+        EF
+        GH
+        """,
+        figure_width_px=4500,  # Breiter, da es 4 Spalten sind
+        panel_label_size=70,
+        row_spacing=30,
+        col_spacing=30,)
 
 
 
