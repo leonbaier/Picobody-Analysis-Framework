@@ -106,20 +106,21 @@ from wet_lab_analysis import (
     export_mw_comparison_table,
     export_sec_mals_summary_table)
 from figure_creation import (
-    create_composite_figure,)
+    create_composite_figure,
+    export_single_panel_figures,)
 
 
 # ---------------Switches-----------------------
 run_all_bool = False
 DEBUG = False
 
-general_sequence_analysis_bool = False
+general_sequence_analysis_bool = True
 cysteine_sequence_analysis_bool = False
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
-wet_lab_analysis_bool = True
+wet_lab_analysis_bool = False
 figure_creation_bool = True
 
 show_plot_titles = False
@@ -1355,6 +1356,22 @@ if figure_creation_bool:
         panel_label_size=100,
         row_spacing=30,
         col_spacing=30, )
+
+    print("Creating Figures 9-12 (Mass Spectrometry)...")
+
+    # Mapping für die MS PDFs
+    ms_figures = {
+        "Figure_09_Mass_Spectrometry_V1.pdf": path_wet_ms_v1,
+        "Figure_10_Mass_Spectrometry_V12.pdf": path_wet_ms_v12,
+        "Figure_11_Mass_Spectrometry_V13.pdf": path_wet_ms_v13,
+        "Figure_12_Mass_Spectrometry_V14.pdf": path_wet_ms_v14,
+    }
+
+    # Aufruf der neuen Funktion
+    export_single_panel_figures(
+        figures_mapping=ms_figures,
+        output_dir=save_dir_thesis_figures
+    )
 
 
 

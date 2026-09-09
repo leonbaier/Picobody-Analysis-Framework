@@ -179,3 +179,29 @@ def create_composite_figure(images: dict[str, Path], layout: str, output_file: P
     final_image.save(output_file)
 
     print(f"[Figure Creation] Saved: {output_file}")
+
+
+def export_single_panel_figures(figures_mapping: dict[str, Path], output_dir: Path):
+    """
+    Exports (copies) standalone figures (like MS PDFs) to the final thesis figure directory,
+    renaming them according to the provided mapping.
+
+    Parameters
+    ----------
+    figures_mapping : dict[str, Path]
+        Mapping of target filename (e.g. "Figure_09_MS_V1.pdf") to the source file path.
+    output_dir : Path
+        Directory where the final thesis figures should be stored.
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for fig_name, source_path in figures_mapping.items():
+        if source_path is not None and source_path.exists():
+            dest_path = output_dir / fig_name
+
+            # Use shutil.copy2 to preserve metadata and allow repeated script execution
+            shutil.copy2(source_path, dest_path)
+
+            print(f"[Figure Creation] Saved standalone figure: {dest_path}")
+        else:
+            print(f"[Figure Creation] Skipping {fig_name}: Source file not found ({source_path})")
