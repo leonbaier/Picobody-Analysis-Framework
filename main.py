@@ -115,7 +115,7 @@ run_all_bool = False
 DEBUG = False
 
 general_sequence_analysis_bool = True
-cysteine_sequence_analysis_bool = False
+cysteine_sequence_analysis_bool = True
 structure_prediction_prep_bool = False
 structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False

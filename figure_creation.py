@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 
 from PIL import Image, ImageDraw, ImageFont
 

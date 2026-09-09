@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
 import logomaker
 from Bio import AlignIO
+import numpy as np
 
 from pathlib import Path
 import subprocess, math
@@ -10,39 +12,61 @@ import time
 from io_utils import set_publication_style
 
 
-def plot_length_distribution(unique_global: dict, save_path: Path = None, show_title: bool = True, size: str = "standard"
-) -> None:
+def plot_length_distribution(unique_global: dict, save_path: Path = None, show_title: bool = True,
+                             size: str = "standard"
+                             ) -> None:
     """
     Plot length distribution of globally unique sequences.
+    Uses discrete integer bins for sequence lengths so that bars align perfectly with x-ticks.
     """
     figsize = (6, 4)
-    set_publication_style(size=size, figsize=figsize,)
+    set_publication_style(size=size, figsize=figsize, )
     plt.figure(figsize=figsize)
 
     lengths = [len(seq) for seq in unique_global.keys()]
 
-    plt.hist(lengths, bins=20, color="tab:blue", edgecolor="black")
+    if not lengths:
+        print("No sequences to plot.")
+        return
+
+    # Create integer bins from min length to max length
+    min_len = min(lengths)
+    max_len = max(lengths)
+
+    # Bins centered on integers: e.g., 249.5 to 250.5 for length 250
+    bins = np.arange(min_len - 0.5, max_len + 1.5, 1.0)
+
+    plt.hist(lengths, bins=bins, color="tab:blue", edgecolor="black")
+
+    # Force ticks every 5 steps (e.g., 245, 250, 255)
+    ax = plt.gca()
+    ax.xaxis.set_major_locator(MultipleLocator(5))
+
     plt.xlabel("Sequence length (aa)")
     plt.ylabel("Count")
+
     if show_title:
         plt.title("Length distribution of globally unique sequences")
+
     plt.tight_layout()
 
     if save_path is not None:
-        plt.savefig(save_path,dpi=300, bbox_inches="tight",)
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"Plot written to: {save_path}")
     else:
         plt.show()
     plt.close()
 
 
-def plot_occurrence_distribution(unique_global: dict, save_path: Path = None, show_title: bool = True, size: str = "standard"
-) -> None:
+def plot_occurrence_distribution(unique_global: dict, save_path: Path = None, show_title: bool = True,
+                                 size: str = "standard"
+                                 ) -> None:
     """
     Plot a histogram of sequence lengths weighted by their occurrence.
+    Uses discrete integer bins for sequence lengths so that bars align perfectly with x-ticks.
     """
     figsize = (6, 4)
-    set_publication_style(size=size, figsize=figsize,)
+    set_publication_style(size=size, figsize=figsize, )
     plt.figure(figsize=figsize)
 
     lengths = []
@@ -52,21 +76,39 @@ def plot_occurrence_distribution(unique_global: dict, save_path: Path = None, sh
         lengths.append(len(sequence))
         weights.append(info["occurrence"])
 
+    if not lengths:
+        print("No sequences to plot.")
+        return
+
+    # Create integer bins from min length to max length
+    min_len = min(lengths)
+    max_len = max(lengths)
+
+    # Bins centered on integers
+    bins = np.arange(min_len - 0.5, max_len + 1.5, 1.0)
+
     plt.hist(
         lengths,
-        bins=30,
+        bins=bins,
         weights=weights,
+        color="tab:blue",
         edgecolor="black",
-        alpha=0.8,)
+        alpha=0.8)
+
+    # Force ticks every 5 steps (e.g., 245, 250, 255)
+    ax = plt.gca()
+    ax.xaxis.set_major_locator(MultipleLocator(5))
 
     plt.xlabel("Sequence length (aa)")
     plt.ylabel("Occurrence")
+
     if show_title:
         plt.title("Occurrence of different sequence lengths")
+
     plt.tight_layout()
 
     if save_path is not None:
-        plt.savefig(save_path, dpi=300, bbox_inches="tight", )
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"Plot written to: {save_path}")
     else:
         plt.show()
@@ -142,7 +184,7 @@ def plot_gap_distribution(aln_path: Path, save_path: Path = None, plot_title: st
 ) -> None:
     """
     Plot gap fraction per alignment position.
-    At each position: number of gaps divided by number of sequences.
+    At each position: number of gaps dividedshows  by number of sequences.
     Long regions with low gap fraction and sharp peaks indicate good conservation.
     """
 
