@@ -114,10 +114,10 @@ from figure_creation import (
 run_all_bool = False
 DEBUG = False
 
-general_sequence_analysis_bool = True
+general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = True
 structure_prediction_prep_bool = False
-structure_prediction_analysis_bool = False # does not work if old pdb files are present
+structure_prediction_analysis_bool = True # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
 wet_lab_analysis_bool = False
@@ -1228,8 +1228,8 @@ if figure_creation_bool:
         output_file=(save_dir_thesis_figures / "Figure_3_Cysteine_Clustering.png"),
         images={
             "A": path_dendrogram_with_knobs,
-            "B": path_cysteine_violin,
-            "C": path_cysteine_heatmap,
+            "B": path_cysteine_heatmap,
+            "C": path_cysteine_violin,
         },
         layout=
         """
