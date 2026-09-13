@@ -115,8 +115,8 @@ run_all_bool = False
 DEBUG = False
 
 general_sequence_analysis_bool = False
-cysteine_sequence_analysis_bool = True
-structure_prediction_prep_bool = False
+cysteine_sequence_analysis_bool = False
+structure_prediction_prep_bool = True
 structure_prediction_analysis_bool = True # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
@@ -1172,11 +1172,12 @@ if wet_lab_analysis_bool:
         ms_mw=ms_mw,
         save_path=save_dir_wet_lab_plots / "MW_comparison.png",
         title="Comparison of Calculated, MS and SEC-MALS Molecular Weights",)
-    mw_comparsion = export_mw_comparison_table(sec_mals_mw=sec_mals_mw,
+    mw_comparison = export_mw_comparison_table(sec_mals_mw=sec_mals_mw,
                                                theoretical_mw=theoretical_mw,
                                                ms_mw =ms_mw,
                                                save_dir=save_dir_tables_gen)
-    mw_comparsion.to_csv(save_dir_variable_data / "mw_comparison.csv", index=False)
+    # somewhere a mistake in sec mals values (in summary correct)
+    # mw_comparison.to_csv(save_dir_variable_data / "mw_comparison.csv", index=False)
     sec_mals_summary = export_sec_mals_summary_table(
         sec_mals_data=sec_mals_data,
         csv_folder=save_dir_variable_data,
@@ -1321,7 +1322,7 @@ if figure_creation_bool:
         images={
             "A": path_wet_affinity_all,
             "B": path_wet_sec_all,
-            "C": path_wet_sds_page,        },
+            "C": path_wet_sds_page,},
         layout=
         """
         AAACC
@@ -1358,20 +1359,14 @@ if figure_creation_bool:
         col_spacing=30, )
 
     print("Creating Figures 9-12 (Mass Spectrometry)...")
-
-    # Mapping für die MS PDFs
     ms_figures = {
         "Figure_09_Mass_Spectrometry_V1.pdf": path_wet_ms_v1,
         "Figure_10_Mass_Spectrometry_V12.pdf": path_wet_ms_v12,
         "Figure_11_Mass_Spectrometry_V13.pdf": path_wet_ms_v13,
-        "Figure_12_Mass_Spectrometry_V14.pdf": path_wet_ms_v14,
-    }
-
-    # Aufruf der neuen Funktion
+        "Figure_12_Mass_Spectrometry_V14.pdf": path_wet_ms_v14,}
     export_single_panel_figures(
         figures_mapping=ms_figures,
-        output_dir=save_dir_thesis_figures
-    )
+        output_dir=save_dir_thesis_figures)
 
 
 
