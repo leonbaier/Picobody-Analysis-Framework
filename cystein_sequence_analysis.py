@@ -446,34 +446,61 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
     Path
        Path to the dendrogram figure, Cluster data structure, Clustering labels, and Sequence IDs.
     """
+
+    # ==========================================================
+    # 1. ALIGNMENT PARSING & PREPARATION
+    # ==========================================================
+    # Load the multiple sequence alignment (MSA) in Clustal format
     alignment = AlignIO.read(aln_path, "clustal")
     if len(alignment) <= n_ignore:
         raise ValueError("Alignment contains fewer sequences than n_ignore.")
 
+    # Exclude reference/literature sequences from the main clustering targets
     target_records = alignment[n_ignore:]
     ids = [rec.id for rec in target_records]
 
+    # Identify reference knob sequences to highlight them later in the dendrogram
     highlight_ids = {rec.id for rec in
                      alignment[:highlight_n]} if highlight_mode == "first_n" and highlight_n > 0 else set()
     knob_ids = set(highlight_ids)
 
+    # Prepare a set of known negative binders for conditional formatting in the plots
     negative_binder_id_set = set(negative_binder_ids.keys()) if negative_binder_ids is not None else set()
 
+    # ==========================================================
+    # 2. FEATURE ENGINEERING (BINARY ENCODING)
+    # ==========================================================
+    # Translate sequences into binary vectors indicating disulfide topology:
+    # 1 represents a Cysteine (C), 0 represents any other amino acid or gap
     patterns = np.array([[1 if aa == "C" else 0 for aa in str(rec.seq)] for rec in target_records])
 
+    # ==========================================================
+    # 3. HIERARCHICAL CLUSTERING & OPTIMIZATION
+    # ==========================================================
     best_score = -1.0
     best_labels = None
     best_k = None
 
+    # Iterate through the specified range of possible cluster counts (k)
+    # to dynamically determine the optimal clustering configuration
     for k in cluster_range:
+        # Using Manhattan distance (cityblock) as it is mathematically appropriate for binary feature vectors
         model = AgglomerativeClustering(n_clusters=k, linkage="average", metric="manhattan")
         labels = model.fit_predict(patterns)
+
+        # Evaluate clustering quality using the Silhouette Coefficient
         score = silhouette_score(patterns, labels, metric="manhattan")
+
+        # Retain the model parameters that yield the highest silhouette score
         if score > best_score:
             best_score = score
             best_k = k
             best_labels = labels
 
+    # ==========================================================
+    # 4. DATA STRUCTURING & MAPPING
+    # ==========================================================
+    # Organize the clustering results into a comprehensive dictionary mapping
     clusters = {}
     for idx, (seq_id, label, record) in enumerate(zip(ids, best_labels, target_records)):
         clusters.setdefault(label, {"indices": [], "ids": [], "sequences": []})
@@ -481,45 +508,54 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
         clusters[label]["ids"].append(seq_id)
         clusters[label]["sequences"].append(str(record.seq))
 
+    # Generate simplified, continuous display IDs for cleaner downstream visualization
     global_display_counter = 1
     for cluster_id in sorted(clusters):
+        # Sort sequences numerically by extracting digits from the sequence ID string
         seq_ids = sorted([str(s) for s in clusters[cluster_id]["ids"]],
                          key=lambda s: int(re.search(r"(\d+)", s).group(1)) if re.search(r"(\d+)", s) else float("inf"))
+
         display_ids = {}
         for seq_id in seq_ids:
             display_ids[seq_id] = global_display_counter
             global_display_counter += 1
         clusters[cluster_id]["display_ids"] = display_ids
 
+    # Compute the final linkage matrix required for building the dendrogram
     Z = linkage(patterns, method="average", metric="cityblock")
 
     # ==========================================================
-    # DENDROGRAM PLOT
+    # 5. DENDROGRAM PLOT (ORIGINAL IDS)
     # ==========================================================
     set_publication_style(size="small", figsize=(20, 10))
     plt.figure(figsize=(20, 10))
     plt.subplots_adjust(bottom=0.1)
 
+    # Define a distinct color palette for visually separating the identified clusters
     cluster_colors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink",
                       "tab:gray", "tab:olive", "cyan", "magenta", "gold", "lime", "teal", "navy", "maroon",
                       "darkorange", "darkgreen", "indigo", "crimson"]
     unique_clusters = sorted(set(best_labels))
     cluster_to_color = {cluster: cluster_colors[i] for i, cluster in enumerate(unique_clusters)}
 
-    # leaf_font_size wurde entfernt -> Skaliert nun automatisch mit dem Style!
+    # Render the base dendrogram structure
     ddata = dendrogram(Z, labels=ids, leaf_rotation=90, color_threshold=0, above_threshold_color="black")
     ax = plt.gca()
 
+    # Shade the background of the dendrogram based on cluster affiliation
     leaf_order = ddata["leaves"]
     ordered_clusters = [best_labels[i] for i in leaf_order]
     blocks = []
     start = 0
+
+    # Identify contiguous blocks of leaves belonging to the same cluster
     for i in range(1, len(ordered_clusters)):
         if ordered_clusters[i] != ordered_clusters[i - 1]:
             blocks.append((start, i - 1, ordered_clusters[i - 1]))
             start = i
     blocks.append((start, len(ordered_clusters) - 1, ordered_clusters[-1]))
 
+    # Apply colored vertical spans across the identified blocks
     for start, end, cluster in blocks:
         ax.axvspan(start * 10, (end + 1) * 10, color=cluster_to_color[cluster], alpha=0.08, zorder=0)
 
@@ -529,20 +565,26 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
     plt.xlabel("Sequences", fontsize=20)
     plt.ylabel("Manhattan distance", fontsize=20)
 
+    # --- Near-Knob Identification via Cophenetic Distance ---
+    # Determine which sequences are structurally similar to known reference knobs
     distance_threshold = Z[-best_k + 1, 2]
     neighbor_distance_threshold = distance_threshold * near_knob_similarity_factor
     id_to_index = {seq_id: i for i, seq_id in enumerate(ids)}
     knob_indices = [id_to_index[sid] for sid in knob_ids if sid in id_to_index]
+
+    # Calculate the pairwise cophenetic distances between all observations in the hierarchical tree
     _, coph_condensed = cophenet(Z, pdist(patterns))
     coph_dists = squareform(coph_condensed)
 
     near_knob_ids = set()
     for i in knob_indices:
         for j, seq_id in enumerate(ids):
+            # A sequence is considered a "near knob" if its distance to a reference knob is below the dynamic threshold
             if i != j and coph_dists[i, j] <= neighbor_distance_threshold:
                 near_knob_ids.add(seq_id)
-    near_knob_ids -= knob_ids
+    near_knob_ids -= knob_ids  # Remove exact reference knobs from the "near" set
 
+    # Map each identified near-knob back to its corresponding reference knob(s)
     near_knob_to_knobs = {}
     for i in knob_indices:
         knob_id = ids[i]
@@ -550,6 +592,7 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
             if i != j and coph_dists[i, j] <= neighbor_distance_threshold and seq_id not in knob_ids:
                 near_knob_to_knobs.setdefault(seq_id, []).append(knob_id)
 
+    # Format the x-axis tick labels to highlight sequence properties (Knob, Near-Knob, Negative Binder)
     for label, leaf_idx in zip(ax.get_xmajorticklabels(), ddata["leaves"]):
         seq_id = ids[leaf_idx]
         if seq_id in knob_ids:
@@ -562,6 +605,7 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
 
     ax.set_ylim(0, Z[:, 2].max() * 1.05)
 
+    # Compile the custom legend representing clusters and highlighting schemas
     legend_elements = [
         Patch(facecolor=cluster_to_color[c], label=f"Cluster {c + 1} (n={len(clusters[c]['sequences'])})") for c in
         sorted(unique_clusters)]
@@ -576,8 +620,9 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
     plt.close()
 
     # ==========================================================
-    # SECOND DENDROGRAM WITH GLOBAL DISPLAY IDS
+    # 6. SECOND DENDROGRAM PLOT (GLOBAL DISPLAY IDS)
     # ==========================================================
+    # Create an alternative visualization utilizing the simplified display IDs
     seq_to_display_id = {k: v for cluster_data in clusters.values() for k, v in cluster_data["display_ids"].items()}
     display_labels = [f"seq {seq_to_display_id[seq_id]}" if seq_id in seq_to_display_id else f"knob {seq_id}" for seq_id
                       in ids]
@@ -586,10 +631,12 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
     plt.figure(figsize=(20, 10))
     plt.subplots_adjust(bottom=0.1)
 
+    # Render the secondary dendrogram
     ddata_display = dendrogram(Z, labels=display_labels, leaf_rotation=90, color_threshold=0,
                                above_threshold_color="black")
     ax = plt.gca()
 
+    # Re-apply the cluster background shading for the secondary plot
     leaf_order = ddata_display["leaves"]
     ordered_clusters = [best_labels[i] for i in leaf_order]
     blocks = []
@@ -609,6 +656,7 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
     plt.xlabel("Display IDs")
     plt.ylabel("Manhattan distance")
 
+    # Re-apply the x-axis label highlighting for the secondary plot
     for label, leaf_idx in zip(ax.get_xmajorticklabels(), ddata_display["leaves"]):
         seq_id = ids[leaf_idx]
         if seq_id in knob_ids:
@@ -622,6 +670,7 @@ def cysteine_clustering(aln_path: Path, fig_path: Path, n_ignore: int = 0,
     ax.set_ylim(0, Z[:, 2].max() * 1.05)
     ax.legend(handles=legend_elements + highlight_legend, title="Legend", loc="upper right")
 
+    # Save the secondary plot with a modified filename
     fig_path_display = fig_path.parent / f"{fig_path.stem}_display_ids.png"
     plt.savefig(fig_path_display, dpi=300)
     plt.close()
