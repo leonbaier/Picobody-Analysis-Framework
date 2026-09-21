@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
+import matplotlib.colors as mcolors
 from matplotlib.colors import to_rgb
 from matplotlib.lines import Line2D
 from matplotlib.legend_handler import HandlerBase
@@ -637,9 +638,13 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
 
             handles.append(elution_handle)
             labels.append("Elution start")
-            ax.legend(handles, labels, handler_map={tuple: HandlerElutionLines()})
+            leg = ax.legend(handles, labels, handler_map={tuple: HandlerElutionLines()},
+                            frameon=True, framealpha=0.8, facecolor="white", edgecolor="black")
+            leg.set_zorder(100)
         else:
-            ax.legend(handles, labels)
+            leg = ax.legend(handles, labels,
+                            frameon=True, framealpha=0.8, facecolor="white", edgecolor="black")
+            leg.set_zorder(100)
 
         plt.tight_layout()
 
@@ -684,6 +689,9 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
     handles = []
     labels = []
 
+    base_color_hex = get_variant_color(run_name)
+    base_rgb = np.array(mcolors.to_rgb(base_color_hex))
+
     # ---------- numeric signals ----------
     for i, signal in enumerate(numeric_signals):
         signal_data = run_data[signal]
@@ -691,7 +699,15 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         signal_lower = signal.lower()
 
         is_uvvis = any(token in signal_lower for token in ["uv", "uv_vis", "uvvis"])
-        color = get_variant_color(run_name)
+
+        if i == 0:
+            color = base_color_hex
+        elif i == 1:
+            color = base_rgb + (np.array([1.0, 1.0, 1.0]) - base_rgb) * 0.45
+        elif i == 2:
+            color = base_rgb * 0.55
+        else:
+            color = base_rgb + (np.array([1.0, 1.0, 1.0]) - base_rgb) * 0.75
 
         line = ax.plot(
             signal_data["x"], signal_data["y"],
@@ -701,6 +717,7 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
 
         ax.set_ylabel(f"{signal} ({signal_data['y_label']})", color=color)
         ax.tick_params(axis="y", labelcolor=color)
+        ax.spines["right" if i > 0 else "left"].set_color(color)
 
         handles.append(line)
         labels.append(signal)
@@ -712,9 +729,9 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
                 return True
         return False
 
+    selected_x = []
     for signal in categorical_signals:
         signal_data = run_data[signal]
-        selected_x = []
 
         for x, label in zip(signal_data["x"], signal_data["labels"]):
             if fraction_filter is not None and not fraction_in_ranges(str(label), fraction_filter):
@@ -738,7 +755,9 @@ def plot_affinity_chromatography_run(data: dict, run_name: str | list[str], sign
         handles.append(pool_patch)
         labels.append("Collected fractions")
     if handles:
-        ax1.legend(handles, labels, loc="upper right")
+        leg = ax1.legend(handles, labels, loc="lower left",
+                         frameon=True, framealpha=0.95, facecolor="white", edgecolor="black")
+        leg.set_zorder(100)
 
     plt.tight_layout()
 
@@ -1691,15 +1710,23 @@ def plot_sec_mals_uv_mw(sec_mals_data: dict, samples: list[str] | None = None, r
                     ax_mw.scatter(x_center, y_center, color="red", s=10, zorder=10)
 
                     if sample == "BSA":
-                        bsa_offsets = [(1, 4), (5, -7)]
-                        dx, dy = bsa_offsets[min(seg_idx, 1)]
+                        bsa_settings = [
+                            {"dx": 5, "dy": 5, "ha": "left", "va": "bottom"},
+                            {"dx": 5, "dy": -5, "ha": "left", "va": "top"}
+                        ]
+                        s = bsa_settings[min(seg_idx, 1)]
                     else:
-                        offsets = {"V1": (1, 4), "V12": (1, 4), "V13": (1, 4), "V14": (-43, 4)}
-                        dx, dy = offsets.get(sample, (1, 3))
+                        s = {"dx": 5, "dy": 5, "ha": "left", "va": "bottom"}
+
+                        if sample == "V14":
+                            s = {"dx": -7, "dy": 5, "ha": "right", "va": "bottom"}
 
                     ax_mw.annotate(
                         f"{mw_mean:.1f} kDa", (x_center, y_center),
-                        xytext=(dx, dy), textcoords="offset points", fontsize=9)
+                        xytext=(s["dx"], s["dy"]), textcoords="offset points",
+                        fontsize=13, ha=s["ha"], va=s["va"],
+                        bbox=dict(facecolor="white", edgecolor="none", alpha=0.7, pad=1.5),
+                        zorder=15)
 
         ax_mw.set_ylabel("Molecular Weight [kDa]")
 
@@ -1755,7 +1782,7 @@ def load_theoretical_fab_mw(report_dir: str | Path,
 
 
 def plot_mw_comparison(sec_mals_mw: dict[str, float], theoretical_mw: dict[str, float], ms_mw: dict[str, float] | None = None,
-                       save_path=None, title: str | None = None,
+                       save_path=None, title: str | None = None, show_title: bool = False,
 ):
     def lighten_color(color, amount=0.5):
         rgb = np.array(to_rgb(color))
@@ -1766,6 +1793,7 @@ def plot_mw_comparison(sec_mals_mw: dict[str, float], theoretical_mw: dict[str, 
     x = np.arange(len(variants))
     width = 0.25
 
+    set_publication_style(size="standard", figsize=(8, 5))
     fig, ax = plt.subplots(figsize=(8, 5))
 
     calc_values = [theoretical_mw.get(v, np.nan) for v in variants]
@@ -1824,10 +1852,11 @@ def plot_mw_comparison(sec_mals_mw: dict[str, float], theoretical_mw: dict[str, 
 
     ax.set_ylabel("Molecular Weight [kDa]")
 
-    if title is None:
-        ax.set_title("Comparison of Molecular Weights")
-    else:
-        ax.set_title(title)
+    if show_title:
+        if title is None:
+            ax.set_title("Comparison of Molecular Weights")
+        else:
+            ax.set_title(title)
 
     method_handles = [
         plt.Rectangle(

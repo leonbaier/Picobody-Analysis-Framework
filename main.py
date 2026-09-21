@@ -137,10 +137,10 @@ comparison_variant_seq = []
 md_selection_mode = "comparison"
 
 ms_mw = {
-        "V1": 1.0,
-        "V12": 1.0,
-        "V13": 1.0,
-        "V14": 1.0,}
+        "V1": 49.831,
+        "V12": 51.175,
+        "V13": 51.277,
+        "V14": 49.284,}
 
 
 # ---------------Paths--------------------------
@@ -361,10 +361,11 @@ if cysteine_sequence_analysis_bool:
         output_dir=save_dir_variable_data,
         output_prefix="cut_DSATYY_WGXG_unique_vs_structure_picobodies")
 
-    plot_gap_distribution(alignment_path, path_plot_gap_distribution_2nd)
-    plot_entropy_distribution(alignment_path, path_plot_entropy_distribution_2nd)
+    plot_gap_distribution(alignment_path, path_plot_gap_distribution_2nd, show_title=show_plot_titles)
+    plot_entropy_distribution(alignment_path, path_plot_entropy_distribution_2nd, show_title=show_plot_titles)
     plot_sequence_logo(alignment_path, path_plot_sequence_logo_no_gaps_2nd, include_gaps=False, plot_title="Logo of Cut Global Unique Sequences")
-    plot_sequence_logo(alignment_path, path_plot_sequence_logo_with_gaps_2nd, include_gaps=True, plot_title="Logo of Cut Global Unique Sequences (with gaps)")
+    plot_sequence_logo(alignment_path, path_plot_sequence_logo_with_gaps_2nd, include_gaps=True, plot_title="Logo of Cut Global Unique Sequences (with gaps)",
+                       show_title=show_plot_titles, size="small",)
     print(f"Plots for {alignment_path} with the gap distribution, the entropy distribution and the logos (with and without gaps) were saved.\n")
 
     # from previously aligned knobs, isolate knob-domain and compare again
@@ -1058,7 +1059,7 @@ if wet_lab_analysis_bool:
     c_nM = 500
     conc_mg_ml_aGNb53nt = c_nM * 1e-9 * mw_aGNb53nt
     runs = [
-        ("mCloverV14_2", "mCloverV14 (0.2 mg/ml)", "mCloverV14_alone", "mCloverV14_mClover", "mCloverV14_2"),
+        ("mCloverV14", "mCloverV14 (0.2 mg/ml)", "mCloverV14_alone", "mCloverV14_mClover", "mCloverV14_2"),
         ("aGNb53nt", "aGNb53nt (0.025 mg/ml)", "GNb53nt_alone_0", "GNb53nt_mClover_0", "aGNb53nt_0.025"),
         ("aGNb53nt", f"aGNb53nt ({conc_mg_ml_aGNb53nt:.3f} mg/ml)", "GNb53nt_alone_500nM", "GNb53nt_mClover_500nM", "aGNb53nt_500nM")]
     for label, title, baseline_run, binding_run, save_suffix in runs:
@@ -1164,18 +1165,20 @@ if wet_lab_analysis_bool:
         run_display_names=["mCloverV1", "mCloverV12", "mCloverV13", "mCloverV14", "BSA"],
         show_uv=False,
         show_mw=True,
-        save_path=save_dir_wet_lab_plots / "SEC_MALS_MW.png", )
+        save_path=save_dir_wet_lab_plots / "SEC_MALS_MW.png",
+        show_title=show_plot_titles)
     theoretical_mw = load_theoretical_fab_mw(save_dir_variable_data)
     plot_mw_comparison(
         sec_mals_mw=sec_mals_mw,
         theoretical_mw=theoretical_mw,
         ms_mw=ms_mw,
         save_path=save_dir_wet_lab_plots / "MW_comparison.png",
-        title="Comparison of Calculated, MS and SEC-MALS Molecular Weights",)
+        title="Comparison of Calculated, MS and SEC-MALS Molecular Weights",
+        show_title=show_plot_titles)
     mw_comparison = export_mw_comparison_table(sec_mals_mw=sec_mals_mw,
                                                theoretical_mw=theoretical_mw,
                                                ms_mw =ms_mw,
-                                               save_dir=save_dir_tables_gen)
+                                               save_dir=save_dir_tables_gen,)
     # somewhere a mistake in sec mals values (in summary correct)
     # mw_comparison.to_csv(save_dir_variable_data / "mw_comparison.csv", index=False)
 
@@ -1370,6 +1373,66 @@ if figure_creation_bool:
         figures_mapping=ms_figures,
         output_dir=save_dir_thesis_figures)
 
+
+
+    print("Creating Supplement Figure 1")
+    create_composite_figure(
+        output_file=(save_dir_thesis_figures / "Supplement_Figure_1_2ndAln_QC.png"),
+        images={
+            "A": path_plot_gap_distribution_2nd,
+            "B": path_plot_entropy_distribution_2nd,
+            "C": path_plot_sequence_logo_with_gaps_2nd,
+            },
+        layout=
+        """
+        AB
+        CC
+        """,
+        figure_width_px=3000,
+        panel_label_size=50,
+        row_spacing=0,
+        col_spacing=25, )
+
+    print("Creating Supplement Figure 2")
+    create_composite_figure(
+        output_file=(save_dir_thesis_figures / "Supplement_Figure_2_Affinity_SUPR-DSF.png"),
+        images={
+            "A": (save_dir_wet_lab_plots / f"V1_affinity_chromatography.png"),
+            "B": (save_dir_wet_lab_plots / f"V12_affinity_chromatography.png"),
+            "C": (save_dir_wet_lab_plots / f"V13_affinity_chromatography.png"),
+            "D": (save_dir_wet_lab_plots / f"V14_affinity_chromatography.png"),
+            "E": (save_dir_wet_lab_plots / f"14-2_affinity_chromatography.png"),
+            "F": (save_dir_wet_lab_plots / f"V14 - 0.1_20260813_mCloverV14_Export_13_08_2026_dBCM.png"),
+        },
+        layout=
+        """
+        AB
+        CD
+        EF
+        """,
+        figure_width_px=3500,
+        panel_label_size=80,
+        row_spacing=30,
+        col_spacing=30, )
+
+    print("Creating Supplement Figure 3")
+    create_composite_figure(
+        output_file=(save_dir_thesis_figures / "Supplement_Figure_3_BLI.png"),
+        images={
+            "A": path_wet_bli_v1,
+            "B": path_wet_bli_v12,
+            "C": path_wet_bli_v13,
+            "D": path_wet_bli_v14,
+        },
+        layout=
+        """
+        AB
+        CD
+        """,
+        figure_width_px=3000,
+        panel_label_size=50,
+        row_spacing=0,
+        col_spacing=25, )
 
 
 print("\n--------------------Runtime--------------------")
