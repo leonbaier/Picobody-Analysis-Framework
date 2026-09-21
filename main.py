@@ -116,11 +116,11 @@ DEBUG = False
 
 general_sequence_analysis_bool = False
 cysteine_sequence_analysis_bool = False
-structure_prediction_prep_bool = True
-structure_prediction_analysis_bool = True # does not work if old pdb files are present
+structure_prediction_prep_bool = False
+structure_prediction_analysis_bool = False # does not work if old pdb files are present
 MD_prep_bool = False
 MD_analysis_bool = False
-wet_lab_analysis_bool = False
+wet_lab_analysis_bool = True
 figure_creation_bool = True
 
 show_plot_titles = False
@@ -1178,6 +1178,8 @@ if wet_lab_analysis_bool:
                                                save_dir=save_dir_tables_gen)
     # somewhere a mistake in sec mals values (in summary correct)
     # mw_comparison.to_csv(save_dir_variable_data / "mw_comparison.csv", index=False)
+
+    # manual adding of remaining decimal positions for final table
     sec_mals_summary = export_sec_mals_summary_table(
         sec_mals_data=sec_mals_data,
         csv_folder=save_dir_variable_data,
@@ -1186,9 +1188,9 @@ if wet_lab_analysis_bool:
 if figure_creation_bool:
     print("\n--------------------Figure Creation--------------------")
 
-    print("Creating Figure 1 (General Sequence Analysis)...")
+    print("Creating Figure 5 (General Sequence Analysis)...")
     create_composite_figure(
-        output_file=(save_dir_thesis_figures / "Figure_1_General_Sequences.png"),
+        output_file=(save_dir_thesis_figures / "Figure_5_General_Sequences.png"),
         images={
             "A": path_plot_length_distribution_1st,
             "B": path_plot_occurrence_distribution_1st,
@@ -1206,9 +1208,9 @@ if figure_creation_bool:
         row_spacing=0,
         col_spacing=25, )
 
-    print("Creating Figure 2 (Cysteine Alignnment)")
+    print("Creating Figure 6 (Cysteine Alignnment)")
     create_composite_figure(
-        output_file=(save_dir_thesis_figures / "Figure_2_Cysteine_Aln.png"),
+        output_file=(save_dir_thesis_figures / "Figure_6_Cysteine_Aln.png"),
         images={
             "A": path_plot_gap_distribution_3rd,
             "B": path_plot_entropy_distribution_3rd,
@@ -1224,9 +1226,9 @@ if figure_creation_bool:
         row_spacing=20,
         col_spacing=25, )
 
-    print("Creating Figure 3 (Cysteine Clustering)...")
+    print("Creating Figure 7 (Cysteine Clustering)...")
     create_composite_figure(
-        output_file=(save_dir_thesis_figures / "Figure_3_Cysteine_Clustering.png"),
+        output_file=(save_dir_thesis_figures / "Figure_7_Cysteine_Clustering.png"),
         images={
             "A": path_dendrogram_with_knobs,
             "B": path_cysteine_heatmap,
@@ -1243,9 +1245,9 @@ if figure_creation_bool:
         row_spacing=20,
         col_spacing=25, )
 
-    print("Creating Figure 4 (Structure Prediction All)...")
+    print("Creating Figure 8 (Structure Prediction All)...")
     create_composite_figure(
-        output_file=(save_dir_thesis_figures / "Figure_4_Structure_Prediction_All.png"),
+        output_file=(save_dir_thesis_figures / "Figure_8_Structure_Prediction_All.png"),
         images={
             "A": path_plddt_landscape_esm_simple,
             "B": path_plddt_landscape_esm_ligand,
@@ -1268,9 +1270,9 @@ if figure_creation_bool:
         row_spacing=30,
         col_spacing=30, )
 
-    print("Creating Figure 5 (Structure Prediction Overview)...")
+    print("Creating Figure 9 (Structure Prediction Overview)...")
     create_composite_figure(
-        output_file=(save_dir_thesis_figures / "Figure_5_Structure_Prediction_Overview.png"),
+        output_file=(save_dir_thesis_figures / "Figure_9_Structure_Prediction_Overview.png"),
         images={
             "A": path_mean_comp_without_ligand,
             "B": path_mean_comp_with_ligand,
@@ -1290,7 +1292,7 @@ if figure_creation_bool:
         row_spacing=30,
         col_spacing=30, )
 
-    print("Creating Figure 6 (Molecular Dynamics)...")
+    print("Creating Figure 10 (Molecular Dynamics)...")
     md_images = {}
     if path_md_overview_rmsd_apo.exists(): md_images["A"] = path_md_overview_rmsd_apo
     if path_md_overview_rmsf_apo.exists(): md_images["B"] = path_md_overview_rmsf_apo
@@ -1301,7 +1303,7 @@ if figure_creation_bool:
 
     if len(md_images) == 6:
         create_composite_figure(
-            output_file=(save_dir_thesis_figures / "Figure_6_Molecular_Dynamics.png"),
+            output_file=(save_dir_thesis_figures / "Figure_10_Molecular_Dynamics.png"),
             images=md_images,
             layout=
             """
@@ -1314,11 +1316,11 @@ if figure_creation_bool:
             row_spacing=30,
             col_spacing=30, )
     else:
-        print("Skipping Figure 6: Not all MD overview plots exist yet.")
+        print("Skipping Figure 10: Not all MD overview plots exist yet.")
 
-    print("Creating Figure 7 (Protein Production & QC)...")
+    print("Creating Figure 11 (Protein Production & QC)...")
     create_composite_figure(
-        output_file=(save_dir_thesis_figures / "Figure_7_Protein_Production.png"),
+        output_file=(save_dir_thesis_figures / "Figure_11_Protein_Production.png"),
         images={
             "A": path_wet_affinity_all,
             "B": path_wet_sec_all,
@@ -1333,9 +1335,9 @@ if figure_creation_bool:
         row_spacing=30,
         col_spacing=30, )
 
-    print("Creating Figure 8 (Biophysical Characterization)...")
+    print("Creating Figure 12 (Biophysical Characterization)...")
     create_composite_figure(
-        output_file=(save_dir_thesis_figures / "Figure_8_Biophysics.png"),
+        output_file=(save_dir_thesis_figures / "Figure_12_Biophysics.png"),
         images={
             "A": path_wet_supr_v1_dbcm,
             "B": path_wet_supr_v12_dbcm,
@@ -1358,12 +1360,12 @@ if figure_creation_bool:
         row_spacing=30,
         col_spacing=30, )
 
-    print("Creating Figures 9-12 (Mass Spectrometry)...")
+    print("Creating Figures 13-16 (Mass Spectrometry)...")
     ms_figures = {
-        "Figure_09_Mass_Spectrometry_V1.pdf": path_wet_ms_v1,
-        "Figure_10_Mass_Spectrometry_V12.pdf": path_wet_ms_v12,
-        "Figure_11_Mass_Spectrometry_V13.pdf": path_wet_ms_v13,
-        "Figure_12_Mass_Spectrometry_V14.pdf": path_wet_ms_v14,}
+        "Figure_13_Mass_Spectrometry_V1.pdf": path_wet_ms_v1,
+        "Figure_14_Mass_Spectrometry_V12.pdf": path_wet_ms_v12,
+        "Figure_15_Mass_Spectrometry_V13.pdf": path_wet_ms_v13,
+        "Figure_16_Mass_Spectrometry_V14.pdf": path_wet_ms_v14,}
     export_single_panel_figures(
         figures_mapping=ms_figures,
         output_dir=save_dir_thesis_figures)

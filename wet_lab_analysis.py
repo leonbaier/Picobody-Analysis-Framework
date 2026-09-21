@@ -1251,8 +1251,8 @@ def two_peak_model(x, offset, slope, a1, c1, s1, a2, c2, s2,):
 
 
 def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str, smooth: bool = True,
-        show_tm: bool = False, show_values: bool = False, save_path=None, title: str | None = None,
-        show_title: bool = False):
+                  show_tm: bool = False, show_values: bool = False, save_path=None, title: str | None = None,
+                  show_title: bool = False):
 
     if experiment not in supr_dsf_data:
         raise KeyError(f"Experiment '{experiment}' not found.")
@@ -1269,11 +1269,13 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
 
     base_color = get_variant_color(sample)
     alphas = np.linspace(0.3, 0.9, len(sample_keys))
+    display_name = sample.split(" - ")[0]
 
     for i, sample_key in enumerate(sample_keys):
         df = experiment_data[sample_key]
         plt.scatter(df["Temperature"], df[signal], color=base_color, alpha=alphas[i], s=10, label=None)
-        plt.plot(df["Temperature"], df[signal], color=base_color, alpha=alphas[i], linewidth=1.5, label=f"Replicate {i + 1}")
+
+        plt.plot(df["Temperature"], df[signal], color=base_color, alpha=alphas[i], linewidth=1.5, label=f"{display_name}-{i + 1}")
 
     tm1, tm2, tonset = None, None, None
 
@@ -1313,7 +1315,7 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
             tonset = calculate_tonset_dbcm(fit_x=x, fit_y=fit_y, peak_fraction=0.05)
             tm1, tm2 = params[3], params[6]
 
-        plt.plot(x, fit_y, color="black", linewidth=2.5, label="Peak fit", zorder=10, alpha=1.0)
+        plt.plot(x, fit_y, color="black", linewidth=2.5, label=f"{display_name} Fit", zorder=10, alpha=1.0)
 
         if show_tm:
             plt.axvline(tm1, color="red", linestyle="--", linewidth=1.5, label="$T_{m1}$")
@@ -1329,7 +1331,6 @@ def plot_supr_dsf(supr_dsf_data: dict, experiment: str, sample: str, signal: str
         if tm2 is not None: text_lines.append(f"$T_{{m2}}$ = {tm2:.1f} °C")
 
         if text_lines:
-            # Explicitly added fontsize=14 to make the temperature box readable in grids
             plt.gca().text(0.98, 0.98, "\n".join(text_lines), transform=plt.gca().transAxes,
                            ha="right", va="top", fontsize=14,
                            bbox=dict(facecolor="white", edgecolor="black", alpha=0.9))
